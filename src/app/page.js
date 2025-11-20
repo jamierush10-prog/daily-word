@@ -290,7 +290,9 @@ export default function App() {
   // --- Render Helper for Bold Text ---
   const renderScripture = (text) => {
     if (!text) return null;
-    // Split text by ** ... ** const parts = text.split(/(\*\*.*?\*\*)/g);
+    // Correctly split the text into parts
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    
     return parts.map((part, index) => {
       if (part.startsWith('**') && part.endsWith('**')) {
         // Remove the asterisks and render bold
