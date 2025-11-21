@@ -85,6 +85,7 @@ export default function App() {
   const [passwordInput, setPasswordInput] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editScripture, setEditScripture] = useState('');
+  const [editHeader, setEditHeader] = useState(''); // NEW: Header state
 
   // Recording State
   const [isRecording, setIsRecording] = useState(false);
@@ -129,9 +130,11 @@ export default function App() {
         const docData = docSnap.data();
         setData(docData);
         setEditScripture(docData.scripture || '');
+        setEditHeader(docData.header || ''); // NEW: Load header
       } else {
         setData(null);
         setEditScripture('');
+        setEditHeader('');
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -175,6 +178,7 @@ export default function App() {
     
     const newData = {
       date: dateStr,
+      header: editHeader, // NEW: Save header
       scripture: editScripture,
       audioUrl: data?.audioUrl || null,
       updatedAt: new Date().toISOString()
@@ -248,6 +252,7 @@ export default function App() {
       const docRef = doc(db, 'readings', dateStr);
       const newData = {
         date: dateStr,
+        header: editHeader || data?.header || '', // Keep header on audio upload
         scripture: data?.scripture || editScripture || '',
         audioUrl: downloadURL,
         updatedAt: new Date().toISOString()
@@ -275,7 +280,9 @@ export default function App() {
       const results = [];
       querySnapshot.forEach((doc) => {
         const d = doc.data();
-        if (d.scripture && d.scripture.toLowerCase().includes(searchQuery.toLowerCase())) {
+        // Search in BOTH header and scripture
+        const textToSearch = (d.header + ' ' + d.scripture).toLowerCase();
+        if (textToSearch.includes(searchQuery.toLowerCase())) {
           results.push(d);
         }
       });
@@ -290,12 +297,10 @@ export default function App() {
   // --- Render Helper for Bold Text ---
   const renderScripture = (text) => {
     if (!text) return null;
-    // Correctly split the text into parts
     const parts = text.split(/(\*\*.*?\*\*)/g);
     
     return parts.map((part, index) => {
       if (part.startsWith('**') && part.endsWith('**')) {
-        // Remove the asterisks and render bold
         return <strong key={index} className="font-bold text-stone-900">{part.slice(2, -2)}</strong>;
       }
       return <span key={index}>{part}</span>;
@@ -366,7 +371,7 @@ export default function App() {
             ) : (
               <>
                 {/* Empty State / Edit Mode */}
-                {(!data?.scripture && !isEditing) ? (
+                {(!data?.scripture && !isEditing && !data?.header) ? (
                   <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
                     <p className="text-stone-400 mb-4 italic">No scripture added for this day.</p>
                     {isAdmin && (
@@ -383,13 +388,22 @@ export default function App() {
                   <div className="p-8 flex-1">
                     {isEditing ? (
                       <div className="flex flex-col h-full gap-4">
+                        {/* NEW: Header Input */}
+                        <input
+                          type="text"
+                          className="w-full border border-stone-300 rounded-lg p-4 font-serif text-xl font-bold placeholder:font-normal focus:ring-2 focus:ring-stone-500 focus:outline-none bg-stone-50"
+                          value={editHeader}
+                          onChange={(e) => setEditHeader(e.target.value)}
+                          placeholder="Title (e.g., John 1: 1-19)"
+                        />
+                        
                         <textarea 
                           className="w-full flex-1 border border-stone-300 rounded-lg p-4 font-serif text-lg resize-none focus:ring-2 focus:ring-stone-500 focus:outline-none bg-stone-50"
                           value={editScripture}
                           onChange={(e) => setEditScripture(e.target.value)}
                           placeholder="Paste scripture here..."
                         />
-                        <p className="text-xs text-stone-400">Tip: Wrap headers in **double asterisks** to make them bold.</p>
+                        <p className="text-xs text-stone-400">Tip: Wrap text in **double asterisks** to make it bold.</p>
                         <div className="flex gap-2 justify-end">
                           <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-stone-500">Cancel</button>
                           <button 
@@ -408,6 +422,14 @@ export default function App() {
                            </button>
                          )}
                          <h3 className="text-sm text-stone-400 font-bold uppercase mb-4 tracking-widest">Scripture Reading</h3>
+                         
+                         {/* NEW: Header Display */}
+                         {data?.header && (
+                           <h2 className="text-2xl md:text-3xl font-serif font-bold text-stone-900 mb-6 leading-tight">
+                             {data.header}
+                           </h2>
+                         )}
+
                          <div className="text-xl md:text-2xl font-serif leading-relaxed text-stone-800 whitespace-pre-wrap">
                            {renderScripture(data?.scripture)}
                          </div>
@@ -552,7 +574,8 @@ export default function App() {
                     className="p-4 border border-stone-100 rounded-xl hover:bg-stone-50 cursor-pointer transition-colors"
                   >
                      <div className="text-sm text-stone-500 font-bold mb-1">{getDisplayDate(new Date(res.date))}</div>
-                     <div className="text-stone-800 line-clamp-2 font-serif">{res.scripture}</div>
+                     <div className="text-stone-800 line-clamp-2 font-serif font-bold">{res.header}</div>
+                     <div className="text-stone-600 line-clamp-2 font-serif">{res.scripture}</div>
                   </div>
                 ))}
               </div>
