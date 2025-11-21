@@ -273,13 +273,12 @@ export default function App() {
     }
   };
 
-  // --- Render Helper for Bold AND Red Text ---
+  // --- Render Helper for Bold, Red, and Italic Text ---
   const renderScripture = (text) => {
     if (!text) return null;
     
-    // Split by both bold (**) and red (::) markers
-    // The regex captures the delimiters so we can identify them in the loop
-    const parts = text.split(/(\*\*.*?\*\*|::.*?::)/g);
+    // Split by bold (**), red (::), and italic (_) markers
+    const parts = text.split(/(\*\*.*?\*\*|::.*?::|_.*?_)/g);
     
     return parts.map((part, index) => {
       if (part.startsWith('**') && part.endsWith('**')) {
@@ -288,6 +287,9 @@ export default function App() {
       } else if (part.startsWith('::') && part.endsWith('::')) {
         // Render Red
         return <span key={index} className="text-red-600">{part.slice(2, -2)}</span>;
+      } else if (part.startsWith('_') && part.endsWith('_')) {
+        // Render Italic
+        return <em key={index} className="italic">{part.slice(1, -1)}</em>;
       }
       return <span key={index}>{part}</span>;
     });
@@ -392,7 +394,7 @@ export default function App() {
                           onChange={(e) => setEditScripture(e.target.value)}
                           placeholder="Paste scripture here..."
                         />
-                        <p className="text-xs text-stone-400">Tip: Wrap text in **bold** or ::red text::</p>
+                        <p className="text-xs text-stone-400">Tip: **bold**, ::red::, or _italic_</p>
 
                         {/* Bottom Row: Group & Version Inputs + Buttons */}
                         <div className="flex items-center gap-3 pt-2">
