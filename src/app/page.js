@@ -161,7 +161,8 @@ export default function App() {
   // --- Admin / Login Logic ---
   const handleLogin = (e) => {
     e.preventDefault();
-    if (passwordInput === '1234') {
+    // UPDATED: Changed password to "dw2025"
+    if (passwordInput === 'dw2025') {
       setIsAdmin(true);
       setShowLogin(false);
       setPasswordInput('');
