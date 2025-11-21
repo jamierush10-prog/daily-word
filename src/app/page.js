@@ -97,7 +97,8 @@ export default function App() {
   const [isEditing, setIsEditing] = useState(false);
   const [editScripture, setEditScripture] = useState('');
   const [editHeader, setEditHeader] = useState('');
-  const [editGroup, setEditGroup] = useState(''); // NEW: Group State
+  const [editGroup, setEditGroup] = useState(''); 
+  const [editVersion, setEditVersion] = useState(''); // NEW: Version State
 
   // Upload State
   const [isUploading, setIsUploading] = useState(false);
@@ -139,12 +140,14 @@ export default function App() {
         setData(docData);
         setEditScripture(docData.scripture || '');
         setEditHeader(docData.header || ''); 
-        setEditGroup(docData.group || ''); // NEW: Load Group
+        setEditGroup(docData.group || ''); 
+        setEditVersion(docData.version || ''); // NEW: Load Version
       } else {
         setData(null);
         setEditScripture('');
         setEditHeader('');
         setEditGroup('');
+        setEditVersion('');
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -189,7 +192,8 @@ export default function App() {
     const newData = {
       date: dateStr,
       header: editHeader,
-      group: editGroup, // NEW: Save Group
+      group: editGroup,
+      version: editVersion, // NEW: Save Version
       scripture: editScripture,
       audioUrl: data?.audioUrl || null,
       updatedAt: new Date().toISOString()
@@ -227,7 +231,8 @@ export default function App() {
       const newData = {
         date: dateStr,
         header: editHeader || data?.header || '', 
-        group: editGroup || data?.group || '', // Keep group on upload
+        group: editGroup || data?.group || '', 
+        version: editVersion || data?.version || '', // Keep version on upload
         scripture: data?.scripture || editScripture || '',
         audioUrl: downloadURL,
         updatedAt: new Date().toISOString()
@@ -255,8 +260,8 @@ export default function App() {
       const results = [];
       querySnapshot.forEach((doc) => {
         const d = doc.data();
-        // Search in header, scripture, AND group
-        const textToSearch = (d.header + ' ' + d.scripture + ' ' + (d.group || '')).toLowerCase();
+        // Search in header, scripture, group, AND version
+        const textToSearch = (d.header + ' ' + d.scripture + ' ' + (d.group || '') + ' ' + (d.version || '')).toLowerCase();
         if (textToSearch.includes(searchQuery.toLowerCase())) {
           results.push(d);
         }
@@ -383,15 +388,23 @@ export default function App() {
                         />
                         <p className="text-xs text-stone-400">Tip: Wrap text in **double asterisks** to make it bold.</p>
 
-                        {/* Bottom Row: Group Input + Buttons */}
+                        {/* Bottom Row: Group & Version Inputs + Buttons */}
                         <div className="flex items-center gap-3 pt-2">
-                           {/* NEW: Group Input */}
+                           {/* Group Input */}
                            <input
                               type="text"
                               className="flex-1 border border-stone-300 rounded-lg p-2 font-serif text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-500"
                               value={editGroup}
                               onChange={(e) => setEditGroup(e.target.value)}
                               placeholder="Group (e.g. Group 1)"
+                           />
+                           {/* NEW: Version Input */}
+                           <input
+                              type="text"
+                              className="flex-1 border border-stone-300 rounded-lg p-2 font-serif text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-500"
+                              value={editVersion}
+                              onChange={(e) => setEditVersion(e.target.value)}
+                              placeholder="Version (e.g. NIV)"
                            />
                            <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-stone-500">Cancel</button>
                            <button 
@@ -424,10 +437,11 @@ export default function App() {
                            </div>
                         </div>
 
-                        {/* NEW: Group Display at bottom */}
-                        {data?.group && (
-                          <div className="mt-8 pt-4 border-t border-stone-100">
-                             <p className="font-bold text-stone-900">{data.group}</p>
+                        {/* NEW: Group & Version Display at bottom */}
+                        {(data?.group || data?.version) && (
+                          <div className="mt-8 pt-4 border-t border-stone-100 flex gap-4">
+                             {data?.group && <p className="font-bold text-stone-900">{data.group}</p>}
+                             {data?.version && <p className="font-bold text-stone-500">{data.version}</p>}
                           </div>
                         )}
                       </div>
@@ -560,8 +574,11 @@ export default function App() {
                      <div className="text-sm text-stone-500 font-bold mb-1">{getDisplayDate(new Date(res.date))}</div>
                      <div className="text-stone-800 line-clamp-2 font-serif font-bold">{res.header}</div>
                      <div className="text-stone-600 line-clamp-2 font-serif">{res.scripture}</div>
-                     {/* Display Group in Search Results too */}
-                     {res.group && <div className="text-xs font-bold text-stone-400 mt-1">{res.group}</div>}
+                     {/* Display Group & Version in Search Results too */}
+                     <div className="flex gap-2 mt-1">
+                        {res.group && <div className="text-xs font-bold text-stone-400">{res.group}</div>}
+                        {res.version && <div className="text-xs font-bold text-stone-300 border-l border-stone-200 pl-2">{res.version}</div>}
+                     </div>
                   </div>
                 ))}
               </div>
