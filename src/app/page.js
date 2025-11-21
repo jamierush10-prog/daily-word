@@ -13,7 +13,7 @@ import {
   Edit2,
   Loader2,
   X,
-  Upload // NEW: Added Upload icon
+  Upload 
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { 
@@ -70,6 +70,19 @@ const getDisplayDate = (date) => {
   });
 };
 
+// NEW: Calculate Day Number relative to Nov 21, 2025
+const getDayNumber = (currentDate) => {
+  const startDate = new Date('2025-11-21T00:00:00'); // Day 1
+  // Reset hours to ensure clean calculation
+  const target = new Date(currentDate);
+  target.setHours(0, 0, 0, 0);
+  startDate.setHours(0, 0, 0, 0);
+
+  const diffTime = target - startDate;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+  return diffDays + 1; // +1 because start date is Day 1, not Day 0
+};
+
 export default function App() {
   // --- State ---
   const [user, setUser] = useState(null);
@@ -87,7 +100,7 @@ export default function App() {
 
   // Upload State (Replaces Recording State)
   const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef(null); // Reference to hidden file input
+  const fileInputRef = useRef(null); 
 
   // Search State
   const [showSearch, setShowSearch] = useState(false);
@@ -265,6 +278,8 @@ export default function App() {
     });
   };
 
+  const dayNumber = getDayNumber(currentDate);
+
   return (
     <div className="min-h-screen bg-stone-50 font-sans text-stone-900 relative">
       
@@ -299,7 +314,13 @@ export default function App() {
           <button onClick={handlePrevDay} className="p-2 rounded-full bg-stone-100 text-stone-600 shadow-sm active:scale-95 transition-transform">
             <ChevronLeft size={28} />
           </button>
-          <div className="text-center">
+          <div className="text-center flex flex-col items-center">
+             {/* NEW: Day Counter Badge */}
+             {dayNumber > 0 && (
+               <span className="text-xs font-bold bg-stone-200 text-stone-600 px-2 py-0.5 rounded-full mb-1">
+                 Day {dayNumber}
+               </span>
+             )}
             <div className="text-sm text-stone-500 uppercase tracking-widest font-semibold">
               {currentDate.toLocaleDateString('en-US', { weekday: 'long' })}
             </div>
