@@ -98,7 +98,7 @@ export default function App() {
   const [editScripture, setEditScripture] = useState('');
   const [editHeader, setEditHeader] = useState('');
   const [editGroup, setEditGroup] = useState(''); 
-  const [editVersion, setEditVersion] = useState(''); // NEW: Version State
+  const [editVersion, setEditVersion] = useState('');
 
   // Upload State
   const [isUploading, setIsUploading] = useState(false);
@@ -141,7 +141,7 @@ export default function App() {
         setEditScripture(docData.scripture || '');
         setEditHeader(docData.header || ''); 
         setEditGroup(docData.group || ''); 
-        setEditVersion(docData.version || ''); // NEW: Load Version
+        setEditVersion(docData.version || '');
       } else {
         setData(null);
         setEditScripture('');
@@ -193,7 +193,7 @@ export default function App() {
       date: dateStr,
       header: editHeader,
       group: editGroup,
-      version: editVersion, // NEW: Save Version
+      version: editVersion,
       scripture: editScripture,
       audioUrl: data?.audioUrl || null,
       updatedAt: new Date().toISOString()
@@ -232,7 +232,7 @@ export default function App() {
         date: dateStr,
         header: editHeader || data?.header || '', 
         group: editGroup || data?.group || '', 
-        version: editVersion || data?.version || '', // Keep version on upload
+        version: editVersion || data?.version || '',
         scripture: data?.scripture || editScripture || '',
         audioUrl: downloadURL,
         updatedAt: new Date().toISOString()
@@ -260,7 +260,6 @@ export default function App() {
       const results = [];
       querySnapshot.forEach((doc) => {
         const d = doc.data();
-        // Search in header, scripture, group, AND version
         const textToSearch = (d.header + ' ' + d.scripture + ' ' + (d.group || '') + ' ' + (d.version || '')).toLowerCase();
         if (textToSearch.includes(searchQuery.toLowerCase())) {
           results.push(d);
@@ -274,14 +273,21 @@ export default function App() {
     }
   };
 
-  // --- Render Helper for Bold Text ---
+  // --- Render Helper for Bold AND Red Text ---
   const renderScripture = (text) => {
     if (!text) return null;
-    const parts = text.split(/(\*\*.*?\*\*)/g);
+    
+    // Split by both bold (**) and red (::) markers
+    // The regex captures the delimiters so we can identify them in the loop
+    const parts = text.split(/(\*\*.*?\*\*|::.*?::)/g);
     
     return parts.map((part, index) => {
       if (part.startsWith('**') && part.endsWith('**')) {
+        // Render Bold
         return <strong key={index} className="font-bold text-stone-900">{part.slice(2, -2)}</strong>;
+      } else if (part.startsWith('::') && part.endsWith('::')) {
+        // Render Red
+        return <span key={index} className="text-red-600">{part.slice(2, -2)}</span>;
       }
       return <span key={index}>{part}</span>;
     });
@@ -386,7 +392,7 @@ export default function App() {
                           onChange={(e) => setEditScripture(e.target.value)}
                           placeholder="Paste scripture here..."
                         />
-                        <p className="text-xs text-stone-400">Tip: Wrap text in **double asterisks** to make it bold.</p>
+                        <p className="text-xs text-stone-400">Tip: Wrap text in **bold** or ::red text::</p>
 
                         {/* Bottom Row: Group & Version Inputs + Buttons */}
                         <div className="flex items-center gap-3 pt-2">
@@ -398,7 +404,7 @@ export default function App() {
                               onChange={(e) => setEditGroup(e.target.value)}
                               placeholder="Group (e.g. Group 1)"
                            />
-                           {/* NEW: Version Input */}
+                           {/* Version Input */}
                            <input
                               type="text"
                               className="flex-1 border border-stone-300 rounded-lg p-2 font-serif text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-500"
