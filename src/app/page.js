@@ -70,7 +70,7 @@ const getDisplayDate = (date) => {
   });
 };
 
-// NEW: Calculate Day Number relative to Nov 21, 2025
+// Calculate Day Number relative to Nov 21, 2025
 const getDayNumber = (currentDate) => {
   const startDate = new Date('2025-11-21T00:00:00'); // Day 1
   // Reset hours to ensure clean calculation
@@ -97,8 +97,9 @@ export default function App() {
   const [isEditing, setIsEditing] = useState(false);
   const [editScripture, setEditScripture] = useState('');
   const [editHeader, setEditHeader] = useState('');
+  const [editGroup, setEditGroup] = useState(''); // NEW: Group State
 
-  // Upload State (Replaces Recording State)
+  // Upload State
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null); 
 
@@ -138,10 +139,12 @@ export default function App() {
         setData(docData);
         setEditScripture(docData.scripture || '');
         setEditHeader(docData.header || ''); 
+        setEditGroup(docData.group || ''); // NEW: Load Group
       } else {
         setData(null);
         setEditScripture('');
         setEditHeader('');
+        setEditGroup('');
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -186,6 +189,7 @@ export default function App() {
     const newData = {
       date: dateStr,
       header: editHeader,
+      group: editGroup, // NEW: Save Group
       scripture: editScripture,
       audioUrl: data?.audioUrl || null,
       updatedAt: new Date().toISOString()
@@ -201,7 +205,7 @@ export default function App() {
     }
   };
 
-  // --- Upload Logic (Replaces Recording) ---
+  // --- Upload Logic ---
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -213,7 +217,6 @@ export default function App() {
     if (!user) return;
     setIsUploading(true);
     const dateStr = formatDate(currentDate);
-    // Save as MP3 (or whatever format the user uploads)
     const storageRef = ref(storage, `audio/${dateStr}_${Date.now()}_${fileBlob.name}`);
 
     try {
@@ -224,8 +227,9 @@ export default function App() {
       const newData = {
         date: dateStr,
         header: editHeader || data?.header || '', 
+        group: editGroup || data?.group || '', // Keep group on upload
         scripture: data?.scripture || editScripture || '',
-        audioUrl: downloadURL, // Update with new URL
+        audioUrl: downloadURL,
         updatedAt: new Date().toISOString()
       };
 
@@ -237,7 +241,6 @@ export default function App() {
       alert("Upload failed.");
     } finally {
       setIsUploading(false);
-      // Reset input so you can upload the same file again if needed
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -252,7 +255,8 @@ export default function App() {
       const results = [];
       querySnapshot.forEach((doc) => {
         const d = doc.data();
-        const textToSearch = (d.header + ' ' + d.scripture).toLowerCase();
+        // Search in header, scripture, AND group
+        const textToSearch = (d.header + ' ' + d.scripture + ' ' + (d.group || '')).toLowerCase();
         if (textToSearch.includes(searchQuery.toLowerCase())) {
           results.push(d);
         }
@@ -315,7 +319,7 @@ export default function App() {
             <ChevronLeft size={28} />
           </button>
           <div className="text-center flex flex-col items-center">
-             {/* NEW: Day Counter Badge */}
+             {/* Day Counter Badge */}
              {dayNumber > 0 && (
                <span className="text-xs font-bold bg-stone-200 text-stone-600 px-2 py-0.5 rounded-full mb-1">
                  Day {dayNumber}
@@ -358,10 +362,10 @@ export default function App() {
                     )}
                   </div>
                 ) : (
-                  <div className="p-8 flex-1">
+                  <div className="p-8 flex-1 flex flex-col">
                     {isEditing ? (
                       <div className="flex flex-col h-full gap-4">
-                        {/* NEW: Header Input */}
+                        {/* Header Input */}
                         <input
                           type="text"
                           className="w-full border border-stone-300 rounded-lg p-4 font-serif text-xl font-bold placeholder:font-normal focus:ring-2 focus:ring-stone-500 focus:outline-none bg-stone-50"
@@ -370,42 +374,62 @@ export default function App() {
                           placeholder="Title (e.g., John 1: 1-19)"
                         />
                         
+                        {/* Scripture Input */}
                         <textarea 
-                          className="w-full flex-1 border border-stone-300 rounded-lg p-4 font-serif text-lg resize-none focus:ring-2 focus:ring-stone-500 focus:outline-none bg-stone-50"
+                          className="w-full flex-1 border border-stone-300 rounded-lg p-4 font-serif text-lg resize-none focus:ring-2 focus:ring-stone-500 focus:outline-none bg-stone-50 min-h-[200px]"
                           value={editScripture}
                           onChange={(e) => setEditScripture(e.target.value)}
                           placeholder="Paste scripture here..."
                         />
                         <p className="text-xs text-stone-400">Tip: Wrap text in **double asterisks** to make it bold.</p>
-                        <div className="flex gap-2 justify-end">
-                          <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-stone-500">Cancel</button>
-                          <button 
-                            onClick={handleSaveScripture} 
-                            className="px-6 py-2 bg-green-600 text-white rounded-lg flex items-center gap-2 shadow-md hover:bg-green-700"
-                          >
-                            <Save size={18} /> Save
-                          </button>
+
+                        {/* Bottom Row: Group Input + Buttons */}
+                        <div className="flex items-center gap-3 pt-2">
+                           {/* NEW: Group Input */}
+                           <input
+                              type="text"
+                              className="flex-1 border border-stone-300 rounded-lg p-2 font-serif text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-500"
+                              value={editGroup}
+                              onChange={(e) => setEditGroup(e.target.value)}
+                              placeholder="Group (e.g. Group 1)"
+                           />
+                           <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-stone-500">Cancel</button>
+                           <button 
+                             onClick={handleSaveScripture} 
+                             className="px-6 py-2 bg-green-600 text-white rounded-lg flex items-center gap-2 shadow-md hover:bg-green-700"
+                           >
+                             <Save size={18} /> Save
+                           </button>
                         </div>
                       </div>
                     ) : (
-                      <div className="prose prose-stone max-w-none">
-                         {isAdmin && (
-                           <button onClick={() => setIsEditing(true)} className="absolute top-4 right-4 text-stone-300 hover:text-stone-600">
-                             <Edit2 size={16} />
-                           </button>
-                         )}
-                         <h3 className="text-sm text-stone-400 font-bold uppercase mb-4 tracking-widest">Scripture Reading</h3>
-                         
-                         {/* NEW: Header Display */}
-                         {data?.header && (
-                           <h2 className="text-2xl md:text-3xl font-serif font-bold text-stone-900 mb-6 leading-tight">
-                             {data.header}
-                           </h2>
-                         )}
+                      <div className="flex flex-col h-full">
+                        <div className="prose prose-stone max-w-none flex-1">
+                           {isAdmin && (
+                             <button onClick={() => setIsEditing(true)} className="absolute top-4 right-4 text-stone-300 hover:text-stone-600">
+                               <Edit2 size={16} />
+                             </button>
+                           )}
+                           <h3 className="text-sm text-stone-400 font-bold uppercase mb-4 tracking-widest">Scripture Reading</h3>
+                           
+                           {/* Header Display */}
+                           {data?.header && (
+                             <h2 className="text-2xl md:text-3xl font-serif font-bold text-stone-900 mb-6 leading-tight">
+                               {data.header}
+                             </h2>
+                           )}
 
-                         <div className="text-xl md:text-2xl font-serif leading-relaxed text-stone-800 whitespace-pre-wrap">
-                           {renderScripture(data?.scripture)}
-                         </div>
+                           <div className="text-xl md:text-2xl font-serif leading-relaxed text-stone-800 whitespace-pre-wrap">
+                             {renderScripture(data?.scripture)}
+                           </div>
+                        </div>
+
+                        {/* NEW: Group Display at bottom */}
+                        {data?.group && (
+                          <div className="mt-8 pt-4 border-t border-stone-100">
+                             <p className="font-bold text-stone-900">{data.group}</p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -536,6 +560,8 @@ export default function App() {
                      <div className="text-sm text-stone-500 font-bold mb-1">{getDisplayDate(new Date(res.date))}</div>
                      <div className="text-stone-800 line-clamp-2 font-serif font-bold">{res.header}</div>
                      <div className="text-stone-600 line-clamp-2 font-serif">{res.scripture}</div>
+                     {/* Display Group in Search Results too */}
+                     {res.group && <div className="text-xs font-bold text-stone-400 mt-1">{res.group}</div>}
                   </div>
                 ))}
               </div>
