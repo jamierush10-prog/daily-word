@@ -4,18 +4,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   ChevronLeft, 
   ChevronRight, 
-  Mic, 
-  Square, 
   Play, 
   Pause, 
   Search, 
-  Calendar, 
   Lock, 
   Unlock, 
   Save, 
   Edit2,
   Loader2,
-  X
+  X,
+  Upload // NEW: Added Upload icon
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { 
@@ -85,15 +83,11 @@ export default function App() {
   const [passwordInput, setPasswordInput] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editScripture, setEditScripture] = useState('');
-  const [editHeader, setEditHeader] = useState(''); // NEW: Header state
+  const [editHeader, setEditHeader] = useState('');
 
-  // Recording State
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
+  // Upload State (Replaces Recording State)
   const [isUploading, setIsUploading] = useState(false);
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
-  const timerRef = useRef(null);
+  const fileInputRef = useRef(null); // Reference to hidden file input
 
   // Search State
   const [showSearch, setShowSearch] = useState(false);
@@ -130,7 +124,7 @@ export default function App() {
         const docData = docSnap.data();
         setData(docData);
         setEditScripture(docData.scripture || '');
-        setEditHeader(docData.header || ''); // NEW: Load header
+        setEditHeader(docData.header || ''); 
       } else {
         setData(null);
         setEditScripture('');
@@ -161,7 +155,6 @@ export default function App() {
   // --- Admin / Login Logic ---
   const handleLogin = (e) => {
     e.preventDefault();
-    // UPDATED: Changed password to "dw2025"
     if (passwordInput === 'dw2025') {
       setIsAdmin(true);
       setShowLogin(false);
@@ -179,7 +172,7 @@ export default function App() {
     
     const newData = {
       date: dateStr,
-      header: editHeader, // NEW: Save header
+      header: editHeader,
       scripture: editScripture,
       audioUrl: data?.audioUrl || null,
       updatedAt: new Date().toISOString()
@@ -195,67 +188,31 @@ export default function App() {
     }
   };
 
-  // --- Recording Logic ---
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
-      audioChunksRef.current = [];
-
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
-      };
-
-      mediaRecorderRef.current.onstop = handleRecordingStop;
-
-      mediaRecorderRef.current.start();
-      setIsRecording(true);
-      
-      // Start Timer
-      setRecordingTime(0);
-      timerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-
-    } catch (err) {
-      console.error("Error accessing microphone:", err);
-      alert("Could not access microphone. Please allow permissions.");
-    }
+  // --- Upload Logic (Replaces Recording) ---
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    await uploadAudio(file);
   };
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      clearInterval(timerRef.current);
-      
-      if (mediaRecorderRef.current.stream) {
-        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
-      }
-    }
-  };
-
-  const handleRecordingStop = async () => {
-    const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/mp3' });
-    await uploadAudio(audioBlob);
-  };
-
-  const uploadAudio = async (blob) => {
+  const uploadAudio = async (fileBlob) => {
     if (!user) return;
     setIsUploading(true);
     const dateStr = formatDate(currentDate);
-    const storageRef = ref(storage, `audio/${dateStr}_${Date.now()}.mp3`);
+    // Save as MP3 (or whatever format the user uploads)
+    const storageRef = ref(storage, `audio/${dateStr}_${Date.now()}_${fileBlob.name}`);
 
     try {
-      const snapshot = await uploadBytes(storageRef, blob);
+      const snapshot = await uploadBytes(storageRef, fileBlob);
       const downloadURL = await getDownloadURL(snapshot.ref);
 
       const docRef = doc(db, 'readings', dateStr);
       const newData = {
         date: dateStr,
-        header: editHeader || data?.header || '', // Keep header on audio upload
+        header: editHeader || data?.header || '', 
         scripture: data?.scripture || editScripture || '',
-        audioUrl: downloadURL,
+        audioUrl: downloadURL, // Update with new URL
         updatedAt: new Date().toISOString()
       };
 
@@ -267,7 +224,8 @@ export default function App() {
       alert("Upload failed.");
     } finally {
       setIsUploading(false);
-      setRecordingTime(0);
+      // Reset input so you can upload the same file again if needed
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -281,7 +239,6 @@ export default function App() {
       const results = [];
       querySnapshot.forEach((doc) => {
         const d = doc.data();
-        // Search in BOTH header and scripture
         const textToSearch = (d.header + ' ' + d.scripture).toLowerCase();
         if (textToSearch.includes(searchQuery.toLowerCase())) {
           results.push(d);
@@ -306,12 +263,6 @@ export default function App() {
       }
       return <span key={index}>{part}</span>;
     });
-  };
-
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -450,7 +401,7 @@ export default function App() {
         <div className="max-w-2xl mx-auto">
           
           {/* If there is audio, show player */}
-          {data?.audioUrl && !isRecording && (
+          {data?.audioUrl && (
              <div className="mb-6 bg-stone-50 rounded-xl p-4 border border-stone-100 flex items-center gap-4">
                 <div className="bg-indigo-100 text-indigo-600 p-3 rounded-full">
                   <Play size={24} fill="currentColor" />
@@ -462,42 +413,29 @@ export default function App() {
              </div>
           )}
 
-          {/* Recording Interface (Only for Admin) */}
+          {/* Upload Interface (Only for Admin) */}
           {isAdmin && (
              <div className="flex flex-col items-center gap-4">
-               {isRecording ? (
-                 <div className="w-full bg-red-50 border border-red-100 rounded-2xl p-6 flex flex-col items-center animate-pulse">
-                    <div className="text-3xl font-mono text-red-600 mb-4 font-bold">
-                      {formatTime(recordingTime)}
-                    </div>
-                    <p className="text-red-400 text-sm mb-4">Recording in progress...</p>
-                    <button 
-                      onClick={stopRecording}
-                      className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center text-white shadow-red-200 shadow-xl hover:scale-105 transition-transform"
-                    >
-                      <Square fill="currentColor" size={24} />
-                    </button>
+               {isUploading ? (
+                 <div className="flex items-center gap-3 text-stone-500">
+                   <Loader2 className="animate-spin" /> Uploading audio...
                  </div>
                ) : (
                  <>
-                  {isUploading ? (
-                    <div className="flex items-center gap-3 text-stone-500">
-                      <Loader2 className="animate-spin" /> Uploading audio...
-                    </div>
-                  ) : (
-                    <button 
-                      onClick={startRecording}
-                      disabled={!data?.scripture} // Prevent recording if no text
-                      className={`w-full py-4 rounded-xl flex items-center justify-center gap-3 font-semibold shadow-lg transition-all ${
-                        !data?.scripture 
-                          ? 'bg-stone-200 text-stone-400 cursor-not-allowed'
-                          : 'bg-stone-900 text-white hover:bg-stone-800 active:scale-95'
-                      }`}
-                    >
-                      <Mic size={20} />
-                      {data?.audioUrl ? 'Record New Version' : 'Record Reading'}
-                    </button>
-                  )}
+                  <input 
+                    type="file" 
+                    accept="audio/*" 
+                    className="hidden" 
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                  />
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full py-4 rounded-xl flex items-center justify-center gap-3 font-semibold shadow-lg transition-all bg-stone-900 text-white hover:bg-stone-800 active:scale-95"
+                  >
+                    <Upload size={20} />
+                    {data?.audioUrl ? 'Replace Audio File' : 'Upload Audio File'}
+                  </button>
                  </>
                )}
              </div>
@@ -524,7 +462,7 @@ export default function App() {
             <form onSubmit={handleLogin}>
               <input 
                 type="password" 
-                placeholder="Enter Password (1234)" 
+                placeholder="Enter Password" 
                 className="w-full border border-stone-200 rounded-lg p-3 mb-4 focus:ring-2 focus:ring-stone-800 outline-none"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
