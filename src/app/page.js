@@ -81,7 +81,8 @@ const getDisplayDate = (date) => {
 // Fix 2: Calculate day number using Noon to avoid DST/Timezone shifts
 const getDayNumber = (currentDate) => {
   // Set start date to Noon to be safe from timezone shifts
-  const startDate = new Date('2025-11-21T12:00:00'); 
+  // UPDATED: Start date changed to November 22, 2025
+  const startDate = new Date('2025-11-22T12:00:00'); 
   
   // Create a copy of current date and set to Noon
   const target = new Date(currentDate);
