@@ -53,6 +53,7 @@ const firebaseConfig = {
   measurementId: "G-SBW8PPLTQ0"
 };
 
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -526,7 +527,7 @@ export default function App() {
                               <div className="p-2 bg-rose-100 text-rose-600 rounded-full">
                                 <MessageCircle size={16} />
                               </div>
-                              <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">Chapter Review</span>
+                              <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">Today's Thought</span>
                             </div>
                             
                             {data?.reviewAudioUrl ? (
