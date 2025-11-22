@@ -52,6 +52,7 @@ const firebaseConfig = {
   measurementId: "G-SBW8PPLTQ0"
 };
 
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -199,7 +200,7 @@ export default function App() {
       version: editVersion,
       scripture: editScripture,
       audioUrl: data?.audioUrl || null,
-      reviewAudioUrl: data?.reviewAudioUrl || null, // Preserve review audio
+      reviewAudioUrl: data?.reviewAudioUrl || null,
       updatedAt: new Date().toISOString()
     };
 
@@ -223,7 +224,6 @@ export default function App() {
   const uploadAudio = async (fileBlob, type) => {
     if (!user) return;
     
-    // Set loading state based on type
     if (type === 'reading') setIsUploadingReading(true);
     else setIsUploadingReview(true);
 
@@ -237,14 +237,12 @@ export default function App() {
 
       const docRef = doc(db, 'readings', dateStr);
       
-      // Construct new data object based on what we are uploading
       const newData = {
         date: dateStr,
         header: editHeader || data?.header || '', 
         group: editGroup || data?.group || '', 
         version: editVersion || data?.version || '',
         scripture: data?.scripture || editScripture || '',
-        // Only update the URL for the specific type we uploaded
         audioUrl: type === 'reading' ? downloadURL : (data?.audioUrl || null),
         reviewAudioUrl: type === 'review' ? downloadURL : (data?.reviewAudioUrl || null),
         updatedAt: new Date().toISOString()
@@ -458,89 +456,92 @@ export default function App() {
                              {data?.version && <p className="font-bold text-stone-500">{data.version}</p>}
                           </div>
                         )}
-
-                        {/* --- AUDIO PLAYERS (Inside the Block) --- */}
-                        
-                        {/* 1. Reading Audio */}
-                        {(data?.audioUrl || isAdmin) && (
-                          <div className="mt-4 bg-stone-50 rounded-xl p-4 border border-stone-100">
-                            <div className="flex items-center gap-3 mb-2">
-                              <div className="p-2 bg-indigo-100 text-indigo-600 rounded-full">
-                                <Headphones size={16} />
-                              </div>
-                              <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">Scripture Reading</span>
-                            </div>
-                            
-                            {data?.audioUrl ? (
-                              <audio controls src={data.audioUrl} className="w-full h-10" />
-                            ) : (
-                              <div className="text-xs text-stone-400 italic py-2 text-center">No reading audio yet.</div>
-                            )}
-
-                            {/* Upload Button (Admin Only) */}
-                            {isAdmin && (
-                              <div className="mt-3 pt-3 border-t border-stone-200/50">
-                                <input 
-                                  type="file" 
-                                  accept="audio/*" 
-                                  className="hidden" 
-                                  ref={readingInputRef}
-                                  onChange={(e) => handleFileSelect(e, 'reading')}
-                                />
-                                <button 
-                                  onClick={() => readingInputRef.current?.click()}
-                                  disabled={isUploadingReading}
-                                  className="w-full py-2 text-sm bg-stone-900 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-stone-800 transition-colors"
-                                >
-                                  {isUploadingReading ? <Loader2 className="animate-spin" size={14} /> : <Upload size={14} />}
-                                  {data?.audioUrl ? 'Replace Reading Audio' : 'Upload Reading Audio'}
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* 2. Review Audio */}
-                        {(data?.reviewAudioUrl || isAdmin) && (
-                          <div className="mt-4 bg-stone-50 rounded-xl p-4 border border-stone-100">
-                            <div className="flex items-center gap-3 mb-2">
-                              <div className="p-2 bg-rose-100 text-rose-600 rounded-full">
-                                <MessageCircle size={16} />
-                              </div>
-                              <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">Chapter Review</span>
-                            </div>
-                            
-                            {data?.reviewAudioUrl ? (
-                              <audio controls src={data.reviewAudioUrl} className="w-full h-10" />
-                            ) : (
-                              <div className="text-xs text-stone-400 italic py-2 text-center">No review audio yet.</div>
-                            )}
-
-                            {/* Upload Button (Admin Only) */}
-                            {isAdmin && (
-                              <div className="mt-3 pt-3 border-t border-stone-200/50">
-                                <input 
-                                  type="file" 
-                                  accept="audio/*" 
-                                  className="hidden" 
-                                  ref={reviewInputRef}
-                                  onChange={(e) => handleFileSelect(e, 'review')}
-                                />
-                                <button 
-                                  onClick={() => reviewInputRef.current?.click()}
-                                  disabled={isUploadingReview}
-                                  className="w-full py-2 text-sm bg-stone-900 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-stone-800 transition-colors"
-                                >
-                                  {isUploadingReview ? <Loader2 className="animate-spin" size={14} /> : <Upload size={14} />}
-                                  {data?.reviewAudioUrl ? 'Replace Review Audio' : 'Upload Review Audio'}
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
                       </div>
                     )}
+
+                    {/* --- AUDIO PLAYERS (Always Visible Below Text) --- */}
+                    <div className="mt-6 space-y-4">
+                      
+                      {/* 1. Reading Audio */}
+                      {(data?.audioUrl || isAdmin) && (
+                        <div className="bg-stone-50 rounded-xl p-4 border border-stone-100">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-indigo-100 text-indigo-600 rounded-full">
+                              <Headphones size={16} />
+                            </div>
+                            <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">Scripture Reading</span>
+                          </div>
+                          
+                          {data?.audioUrl ? (
+                            <audio controls src={data.audioUrl} className="w-full h-10" />
+                          ) : (
+                            <div className="text-xs text-stone-400 italic py-2 text-center">No reading audio yet.</div>
+                          )}
+
+                          {/* Upload Button (Admin Only) */}
+                          {isAdmin && (
+                            <div className="mt-3 pt-3 border-t border-stone-200/50">
+                              <input 
+                                type="file" 
+                                accept="audio/*" 
+                                className="hidden" 
+                                ref={readingInputRef}
+                                onChange={(e) => handleFileSelect(e, 'reading')}
+                              />
+                              <button 
+                                onClick={() => readingInputRef.current?.click()}
+                                disabled={isUploadingReading}
+                                className="w-full py-2 text-sm bg-stone-900 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-stone-800 transition-colors"
+                              >
+                                {isUploadingReading ? <Loader2 className="animate-spin" size={14} /> : <Upload size={14} />}
+                                {data?.audioUrl ? 'Replace Reading Audio' : 'Upload Reading Audio'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* 2. Review Audio */}
+                      {(data?.reviewAudioUrl || isAdmin) && (
+                        <div className="bg-stone-50 rounded-xl p-4 border border-stone-100">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-rose-100 text-rose-600 rounded-full">
+                              <MessageCircle size={16} />
+                            </div>
+                            <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">Chapter Review</span>
+                          </div>
+                          
+                          {data?.reviewAudioUrl ? (
+                            <audio controls src={data.reviewAudioUrl} className="w-full h-10" />
+                          ) : (
+                            <div className="text-xs text-stone-400 italic py-2 text-center">No review audio yet.</div>
+                          )}
+
+                          {/* Upload Button (Admin Only) */}
+                          {isAdmin && (
+                            <div className="mt-3 pt-3 border-t border-stone-200/50">
+                              <input 
+                                type="file" 
+                                accept="audio/*" 
+                                className="hidden" 
+                                ref={reviewInputRef}
+                                onChange={(e) => handleFileSelect(e, 'review')}
+                              />
+                              <button 
+                                onClick={() => reviewInputRef.current?.click()}
+                                disabled={isUploadingReview}
+                                className="w-full py-2 text-sm bg-stone-900 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-stone-800 transition-colors"
+                              >
+                                {isUploadingReview ? <Loader2 className="animate-spin" size={14} /> : <Upload size={14} />}
+                                {data?.reviewAudioUrl ? 'Replace Review Audio' : 'Upload Review Audio'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {/* --- End Audio Players --- */}
+
                   </div>
                 )}
               </>
