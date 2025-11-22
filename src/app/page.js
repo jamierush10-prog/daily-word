@@ -59,9 +59,14 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// --- Helper Functions ---
+// --- Helper Functions (Timezone Fixed) ---
+
+// Fix 1: Ensure date strings are generated from local time, not UTC
 const formatDate = (date) => {
-  return date.toISOString().split('T')[0]; // YYYY-MM-DD
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 const getDisplayDate = (date) => {
@@ -73,14 +78,17 @@ const getDisplayDate = (date) => {
   });
 };
 
+// Fix 2: Calculate day number using Noon to avoid DST/Timezone shifts
 const getDayNumber = (currentDate) => {
-  const startDate = new Date('2025-11-21T00:00:00'); // Day 1
+  // Set start date to Noon to be safe from timezone shifts
+  const startDate = new Date('2025-11-21T12:00:00'); 
+  
+  // Create a copy of current date and set to Noon
   const target = new Date(currentDate);
-  target.setHours(0, 0, 0, 0);
-  startDate.setHours(0, 0, 0, 0);
+  target.setHours(12, 0, 0, 0);
 
   const diffTime = target - startDate;
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)); 
   return diffDays + 1;
 };
 
