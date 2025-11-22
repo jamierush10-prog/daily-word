@@ -313,7 +313,6 @@ export default function App() {
       
       {/* --- Header --- */}
       <header className="bg-white border-b border-stone-200 p-4 shadow-sm flex items-center justify-between sticky top-0 z-30">
-        {/* NEW: Menu + Search Buttons */}
         <div className="flex items-center gap-2">
            <button onClick={() => setShowSearch(true)} className="p-2 rounded-full hover:bg-stone-100 text-stone-400 transition-colors">
              <Search size={24} />
@@ -444,8 +443,6 @@ export default function App() {
                       </div>
                     ) : (
                       <div className="flex flex-col h-full">
-                        {/* --- TOP SECTION: Header, Audio, Meta --- */}
-                        
                         {/* 1. Header */}
                         <div className="mb-4 pr-10"> 
                            <h3 className="text-sm text-stone-400 font-bold uppercase mb-4 tracking-widest">Scripture Reading</h3>
@@ -456,7 +453,7 @@ export default function App() {
                            )}
                         </div>
 
-                        {/* 2. TODAY'S THOUGHT (Moved to Top) */}
+                        {/* 2. TODAY'S THOUGHT (Review Audio) */}
                         {(data?.reviewAudioUrl || isAdmin) && (
                           <div className="mb-6 bg-stone-50 rounded-xl p-4 border border-stone-100">
                             <div className="flex items-center gap-3 mb-2">
@@ -503,7 +500,7 @@ export default function App() {
                           </div>
                         )}
 
-                        {/* 4. SCRIPTURE READING (Moved Below Group/Version) */}
+                        {/* 4. SCRIPTURE READING (Listen Audio) */}
                         {(data?.audioUrl || isAdmin) && (
                           <div className="mb-8 bg-stone-50 rounded-xl p-4 border border-stone-100">
                             <div className="flex items-center gap-3 mb-2">
