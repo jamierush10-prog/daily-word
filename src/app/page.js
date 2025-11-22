@@ -15,7 +15,8 @@ import {
   X,
   Upload,
   Headphones,
-  MessageCircle
+  MessageCircle,
+  Menu // NEW: Menu Icon
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { 
@@ -109,8 +110,9 @@ export default function App() {
   const readingInputRef = useRef(null);
   const reviewInputRef = useRef(null);
 
-  // Search State
+  // UI State
   const [showSearch, setShowSearch] = useState(false);
+  const [showMenu, setShowMenu] = useState(false); // NEW: Menu State
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -308,8 +310,12 @@ export default function App() {
       
       {/* --- Header --- */}
       <header className="bg-white border-b border-stone-200 p-4 shadow-sm flex items-center justify-between sticky top-0 z-30">
+        {/* NEW: Menu + Search Buttons */}
         <div className="flex items-center gap-2">
-           <button onClick={() => setShowSearch(true)} className="p-2 rounded-full hover:bg-stone-100 text-stone-600 transition-colors">
+           <button onClick={() => setShowMenu(true)} className="p-2 rounded-full hover:bg-stone-100 text-stone-600 transition-colors">
+             <Menu size={24} />
+           </button>
+           <button onClick={() => setShowSearch(true)} className="p-2 rounded-full hover:bg-stone-100 text-stone-400 transition-colors">
              <Search size={24} />
            </button>
         </div>
@@ -555,6 +561,36 @@ export default function App() {
       </main>
 
       {/* --- Modals --- */}
+
+      {/* Menu Modal (New) */}
+      {showMenu && (
+        <div className="fixed inset-0 bg-white z-50 flex flex-col animate-in slide-in-from-left duration-200">
+           <div className="p-4 border-b border-stone-200 flex items-center justify-between">
+             <h2 className="text-xl font-serif font-bold">About This Plan</h2>
+             <button onClick={() => setShowMenu(false)}><X size={24} /></button>
+           </div>
+           
+           <div className="p-6 flex-1 overflow-y-auto prose prose-stone">
+              <h3>Welcome to Daily Word</h3>
+              <p>This reading plan is designed to take us through the Bible in one year, starting from November 21, 2025.</p>
+              
+              <h4>How to use this app:</h4>
+              <ul>
+                <li><strong>Read:</strong> The daily scripture is displayed on the card.</li>
+                <li><strong>Listen:</strong> Click the play button to hear the chapter read aloud.</li>
+                <li><strong>Reflect:</strong> Listen to the Chapter Review for additional insights.</li>
+              </ul>
+
+              <h4>Formatting Tips:</h4>
+              <p>When editing, you can use special codes to format the text:</p>
+              <ul>
+                <li><code>**text**</code> makes text <strong>bold</strong></li>
+                <li><code>::text::</code> makes text <span className="text-red-600">red</span></li>
+                <li><code>_text_</code> makes text <em>italic</em></li>
+              </ul>
+           </div>
+        </div>
+      )}
 
       {/* Login Modal */}
       {showLogin && (
