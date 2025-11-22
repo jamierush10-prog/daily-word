@@ -13,7 +13,9 @@ import {
   Edit2,
   Loader2,
   X,
-  Upload 
+  Upload,
+  Headphones,
+  MessageCircle
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { 
@@ -70,17 +72,15 @@ const getDisplayDate = (date) => {
   });
 };
 
-// Calculate Day Number relative to Nov 21, 2025
 const getDayNumber = (currentDate) => {
   const startDate = new Date('2025-11-21T00:00:00'); // Day 1
-  // Reset hours to ensure clean calculation
   const target = new Date(currentDate);
   target.setHours(0, 0, 0, 0);
   startDate.setHours(0, 0, 0, 0);
 
   const diffTime = target - startDate;
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-  return diffDays + 1; // +1 because start date is Day 1, not Day 0
+  return diffDays + 1;
 };
 
 export default function App() {
@@ -95,14 +95,19 @@ export default function App() {
   const [showLogin, setShowLogin] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  
+  // Content State
   const [editScripture, setEditScripture] = useState('');
   const [editHeader, setEditHeader] = useState('');
   const [editGroup, setEditGroup] = useState(''); 
   const [editVersion, setEditVersion] = useState('');
 
   // Upload State
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef(null); 
+  const [isUploadingReading, setIsUploadingReading] = useState(false);
+  const [isUploadingReview, setIsUploadingReview] = useState(false);
+  
+  const readingInputRef = useRef(null);
+  const reviewInputRef = useRef(null);
 
   // Search State
   const [showSearch, setShowSearch] = useState(false);
@@ -112,9 +117,7 @@ export default function App() {
 
   // --- Auth & Initial Load ---
   useEffect(() => {
-    // Silent login
     signInAnonymously(auth).catch(err => console.error("Auth error:", err));
-
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
     });
@@ -196,6 +199,7 @@ export default function App() {
       version: editVersion,
       scripture: editScripture,
       audioUrl: data?.audioUrl || null,
+      reviewAudioUrl: data?.reviewAudioUrl || null, // Preserve review audio
       updatedAt: new Date().toISOString()
     };
 
@@ -210,31 +214,39 @@ export default function App() {
   };
 
   // --- Upload Logic ---
-  const handleFileSelect = async (e) => {
+  const handleFileSelect = async (e, type) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
-    await uploadAudio(file);
+    await uploadAudio(file, type);
   };
 
-  const uploadAudio = async (fileBlob) => {
+  const uploadAudio = async (fileBlob, type) => {
     if (!user) return;
-    setIsUploading(true);
+    
+    // Set loading state based on type
+    if (type === 'reading') setIsUploadingReading(true);
+    else setIsUploadingReview(true);
+
     const dateStr = formatDate(currentDate);
-    const storageRef = ref(storage, `audio/${dateStr}_${Date.now()}_${fileBlob.name}`);
+    const fileType = type === 'reading' ? 'read' : 'rev';
+    const storageRef = ref(storage, `audio/${dateStr}_${fileType}_${Date.now()}_${fileBlob.name}`);
 
     try {
       const snapshot = await uploadBytes(storageRef, fileBlob);
       const downloadURL = await getDownloadURL(snapshot.ref);
 
       const docRef = doc(db, 'readings', dateStr);
+      
+      // Construct new data object based on what we are uploading
       const newData = {
         date: dateStr,
         header: editHeader || data?.header || '', 
         group: editGroup || data?.group || '', 
         version: editVersion || data?.version || '',
         scripture: data?.scripture || editScripture || '',
-        audioUrl: downloadURL,
+        // Only update the URL for the specific type we uploaded
+        audioUrl: type === 'reading' ? downloadURL : (data?.audioUrl || null),
+        reviewAudioUrl: type === 'review' ? downloadURL : (data?.reviewAudioUrl || null),
         updatedAt: new Date().toISOString()
       };
 
@@ -245,8 +257,10 @@ export default function App() {
       console.error("Error uploading audio:", error);
       alert("Upload failed.");
     } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      setIsUploadingReading(false);
+      setIsUploadingReview(false);
+      if (readingInputRef.current) readingInputRef.current.value = '';
+      if (reviewInputRef.current) reviewInputRef.current.value = '';
     }
   };
 
@@ -273,22 +287,17 @@ export default function App() {
     }
   };
 
-  // --- Render Helper for Bold, Red, and Italic Text ---
+  // --- Render Helper ---
   const renderScripture = (text) => {
     if (!text) return null;
-    
-    // Split by bold (**), red (::), and italic (_) markers
     const parts = text.split(/(\*\*.*?\*\*|::.*?::|_.*?_)/g);
     
     return parts.map((part, index) => {
       if (part.startsWith('**') && part.endsWith('**')) {
-        // Render Bold
         return <strong key={index} className="font-bold text-stone-900">{part.slice(2, -2)}</strong>;
       } else if (part.startsWith('::') && part.endsWith('::')) {
-        // Render Red
         return <span key={index} className="text-red-600">{part.slice(2, -2)}</span>;
       } else if (part.startsWith('_') && part.endsWith('_')) {
-        // Render Italic
         return <em key={index} className="italic">{part.slice(1, -1)}</em>;
       }
       return <span key={index}>{part}</span>;
@@ -324,15 +333,14 @@ export default function App() {
       </header>
 
       {/* --- Main Content Area --- */}
-      <main className="pb-40">
+      <main className="p-4 pb-20">
         
         {/* Date Navigation */}
-        <div className="flex items-center justify-between p-6 bg-white/50 backdrop-blur-sm">
+        <div className="flex items-center justify-between p-6 bg-white/50 backdrop-blur-sm max-w-2xl mx-auto mb-4">
           <button onClick={handlePrevDay} className="p-2 rounded-full bg-stone-100 text-stone-600 shadow-sm active:scale-95 transition-transform">
             <ChevronLeft size={28} />
           </button>
           <div className="text-center flex flex-col items-center">
-             {/* Day Counter Badge */}
              {dayNumber > 0 && (
                <span className="text-xs font-bold bg-stone-200 text-stone-600 px-2 py-0.5 rounded-full mb-1">
                  Day {dayNumber}
@@ -351,10 +359,10 @@ export default function App() {
         </div>
 
         {/* Scripture Card */}
-        <div className="px-4 max-w-2xl mx-auto w-full">
-          <div className="bg-white rounded-2xl shadow-xl border border-stone-100 overflow-hidden min-h-[300px] relative flex flex-col">
+        <div className="max-w-2xl mx-auto w-full">
+          <div className="bg-white rounded-2xl shadow-xl border border-stone-100 overflow-hidden min-h-[300px] flex flex-col">
             {loading ? (
-               <div className="flex-1 flex flex-col items-center justify-center text-stone-400 p-10">
+               <div className="flex-1 flex flex-col items-center justify-center text-stone-400 p-10 min-h-[300px]">
                  <Loader2 className="animate-spin mb-2" size={32} />
                  <p>Loading scripture...</p>
                </div>
@@ -362,7 +370,7 @@ export default function App() {
               <>
                 {/* Empty State / Edit Mode */}
                 {(!data?.scripture && !isEditing && !data?.header) ? (
-                  <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
+                  <div className="flex-1 flex flex-col items-center justify-center p-10 text-center min-h-[300px]">
                     <p className="text-stone-400 mb-4 italic">No scripture added for this day.</p>
                     {isAdmin && (
                       <button 
@@ -396,9 +404,8 @@ export default function App() {
                         />
                         <p className="text-xs text-stone-400">Tip: **bold**, ::red::, or _italic_</p>
 
-                        {/* Bottom Row: Group & Version Inputs + Buttons */}
+                        {/* Bottom Row */}
                         <div className="flex items-center gap-3 pt-2">
-                           {/* Group Input */}
                            <input
                               type="text"
                               className="flex-1 border border-stone-300 rounded-lg p-2 font-serif text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-500"
@@ -406,7 +413,6 @@ export default function App() {
                               onChange={(e) => setEditGroup(e.target.value)}
                               placeholder="Group (e.g. Group 1)"
                            />
-                           {/* Version Input */}
                            <input
                               type="text"
                               className="flex-1 border border-stone-300 rounded-lg p-2 font-serif text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-500"
@@ -425,7 +431,7 @@ export default function App() {
                       </div>
                     ) : (
                       <div className="flex flex-col h-full">
-                        <div className="prose prose-stone max-w-none flex-1">
+                        <div className="prose prose-stone max-w-none flex-1 mb-8">
                            {isAdmin && (
                              <button onClick={() => setIsEditing(true)} className="absolute top-4 right-4 text-stone-300 hover:text-stone-600">
                                <Edit2 size={16} />
@@ -445,13 +451,94 @@ export default function App() {
                            </div>
                         </div>
 
-                        {/* NEW: Group & Version Display at bottom */}
+                        {/* Group & Version Display */}
                         {(data?.group || data?.version) && (
-                          <div className="mt-8 pt-4 border-t border-stone-100 flex gap-4">
+                          <div className="pt-4 border-t border-stone-100 flex gap-4 mb-6">
                              {data?.group && <p className="font-bold text-stone-900">{data.group}</p>}
                              {data?.version && <p className="font-bold text-stone-500">{data.version}</p>}
                           </div>
                         )}
+
+                        {/* --- AUDIO PLAYERS (Inside the Block) --- */}
+                        
+                        {/* 1. Reading Audio */}
+                        {(data?.audioUrl || isAdmin) && (
+                          <div className="mt-4 bg-stone-50 rounded-xl p-4 border border-stone-100">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className="p-2 bg-indigo-100 text-indigo-600 rounded-full">
+                                <Headphones size={16} />
+                              </div>
+                              <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">Scripture Reading</span>
+                            </div>
+                            
+                            {data?.audioUrl ? (
+                              <audio controls src={data.audioUrl} className="w-full h-10" />
+                            ) : (
+                              <div className="text-xs text-stone-400 italic py-2 text-center">No reading audio yet.</div>
+                            )}
+
+                            {/* Upload Button (Admin Only) */}
+                            {isAdmin && (
+                              <div className="mt-3 pt-3 border-t border-stone-200/50">
+                                <input 
+                                  type="file" 
+                                  accept="audio/*" 
+                                  className="hidden" 
+                                  ref={readingInputRef}
+                                  onChange={(e) => handleFileSelect(e, 'reading')}
+                                />
+                                <button 
+                                  onClick={() => readingInputRef.current?.click()}
+                                  disabled={isUploadingReading}
+                                  className="w-full py-2 text-sm bg-stone-900 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-stone-800 transition-colors"
+                                >
+                                  {isUploadingReading ? <Loader2 className="animate-spin" size={14} /> : <Upload size={14} />}
+                                  {data?.audioUrl ? 'Replace Reading Audio' : 'Upload Reading Audio'}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* 2. Review Audio */}
+                        {(data?.reviewAudioUrl || isAdmin) && (
+                          <div className="mt-4 bg-stone-50 rounded-xl p-4 border border-stone-100">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className="p-2 bg-rose-100 text-rose-600 rounded-full">
+                                <MessageCircle size={16} />
+                              </div>
+                              <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">Chapter Review</span>
+                            </div>
+                            
+                            {data?.reviewAudioUrl ? (
+                              <audio controls src={data.reviewAudioUrl} className="w-full h-10" />
+                            ) : (
+                              <div className="text-xs text-stone-400 italic py-2 text-center">No review audio yet.</div>
+                            )}
+
+                            {/* Upload Button (Admin Only) */}
+                            {isAdmin && (
+                              <div className="mt-3 pt-3 border-t border-stone-200/50">
+                                <input 
+                                  type="file" 
+                                  accept="audio/*" 
+                                  className="hidden" 
+                                  ref={reviewInputRef}
+                                  onChange={(e) => handleFileSelect(e, 'review')}
+                                />
+                                <button 
+                                  onClick={() => reviewInputRef.current?.click()}
+                                  disabled={isUploadingReview}
+                                  className="w-full py-2 text-sm bg-stone-900 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-stone-800 transition-colors"
+                                >
+                                  {isUploadingReview ? <Loader2 className="animate-spin" size={14} /> : <Upload size={14} />}
+                                  {data?.reviewAudioUrl ? 'Replace Review Audio' : 'Upload Review Audio'}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                       </div>
                     )}
                   </div>
@@ -462,59 +549,6 @@ export default function App() {
         </div>
 
       </main>
-
-      {/* --- Audio Controller (Sticky Bottom) --- */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200 p-4 pb-8 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-40">
-        <div className="max-w-2xl mx-auto">
-          
-          {/* If there is audio, show player */}
-          {data?.audioUrl && (
-             <div className="mb-6 bg-stone-50 rounded-xl p-4 border border-stone-100 flex items-center gap-4">
-                <div className="bg-indigo-100 text-indigo-600 p-3 rounded-full">
-                  <Play size={24} fill="currentColor" />
-                </div>
-                <div className="flex-1">
-                   <p className="text-xs text-stone-500 font-bold uppercase mb-1">Daily Reflection</p>
-                   <audio controls src={data.audioUrl} className="w-full h-8" />
-                </div>
-             </div>
-          )}
-
-          {/* Upload Interface (Only for Admin) */}
-          {isAdmin && (
-             <div className="flex flex-col items-center gap-4">
-               {isUploading ? (
-                 <div className="flex items-center gap-3 text-stone-500">
-                   <Loader2 className="animate-spin" /> Uploading audio...
-                 </div>
-               ) : (
-                 <>
-                  <input 
-                    type="file" 
-                    accept="audio/*" 
-                    className="hidden" 
-                    ref={fileInputRef}
-                    onChange={handleFileSelect}
-                  />
-                  <button 
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full py-4 rounded-xl flex items-center justify-center gap-3 font-semibold shadow-lg transition-all bg-stone-900 text-white hover:bg-stone-800 active:scale-95"
-                  >
-                    <Upload size={20} />
-                    {data?.audioUrl ? 'Replace Audio File' : 'Upload Audio File'}
-                  </button>
-                 </>
-               )}
-             </div>
-          )}
-
-          {!isAdmin && !data?.audioUrl && (
-            <div className="text-center text-stone-400 text-sm py-2">
-              No recording available for today yet.
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* --- Modals --- */}
 
@@ -582,7 +616,6 @@ export default function App() {
                      <div className="text-sm text-stone-500 font-bold mb-1">{getDisplayDate(new Date(res.date))}</div>
                      <div className="text-stone-800 line-clamp-2 font-serif font-bold">{res.header}</div>
                      <div className="text-stone-600 line-clamp-2 font-serif">{res.scripture}</div>
-                     {/* Display Group & Version in Search Results too */}
                      <div className="flex gap-2 mt-1">
                         {res.group && <div className="text-xs font-bold text-stone-400">{res.group}</div>}
                         {res.version && <div className="text-xs font-bold text-stone-300 border-l border-stone-200 pl-2">{res.version}</div>}
