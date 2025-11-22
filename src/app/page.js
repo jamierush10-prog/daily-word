@@ -456,56 +456,9 @@ export default function App() {
                            )}
                         </div>
 
-                        {/* 2. Reading Audio */}
-                        {(data?.audioUrl || isAdmin) && (
-                          <div className="mb-6 bg-stone-50 rounded-xl p-4 border border-stone-100">
-                            <div className="flex items-center gap-3 mb-2">
-                              <div className="p-2 bg-indigo-100 text-indigo-600 rounded-full">
-                                <Headphones size={16} />
-                              </div>
-                              <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">Listen</span>
-                            </div>
-                            
-                            {data?.audioUrl ? (
-                              <audio controls src={data.audioUrl} className="w-full h-10" />
-                            ) : (
-                              <div className="text-xs text-stone-400 italic py-2 text-center">No reading audio.</div>
-                            )}
-
-                            {/* Upload Button */}
-                            {isAdmin && (
-                              <div className="mt-3 pt-3 border-t border-stone-200/50">
-                                <input 
-                                  type="file" 
-                                  accept="audio/*" 
-                                  className="hidden" 
-                                  ref={readingInputRef}
-                                  onChange={(e) => handleFileSelect(e, 'reading')}
-                                />
-                                <button 
-                                  onClick={() => readingInputRef.current?.click()}
-                                  disabled={isUploadingReading}
-                                  className="w-full py-2 text-sm bg-stone-900 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-stone-800 transition-colors"
-                                >
-                                  {isUploadingReading ? <Loader2 className="animate-spin" size={14} /> : <Upload size={14} />}
-                                  {data?.audioUrl ? 'Replace Audio' : 'Upload Audio'}
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* 3. Group & Version */}
-                        {(data?.group || data?.version) && (
-                          <div className="flex gap-4 mb-6 pb-4 border-b border-stone-100">
-                             {data?.group && <p className="font-bold text-stone-900">{data.group}</p>}
-                             {data?.version && <p className="font-bold text-stone-500">{data.version}</p>}
-                          </div>
-                        )}
-
-                        {/* 4. TODAY'S THOUGHT (Moved above Text) */}
+                        {/* 2. TODAY'S THOUGHT (Moved to Top) */}
                         {(data?.reviewAudioUrl || isAdmin) && (
-                          <div className="mb-8 bg-stone-50 rounded-xl p-4 border border-stone-100">
+                          <div className="mb-6 bg-stone-50 rounded-xl p-4 border border-stone-100">
                             <div className="flex items-center gap-3 mb-2">
                               <div className="p-2 bg-rose-100 text-rose-600 rounded-full">
                                 <MessageCircle size={16} />
@@ -536,6 +489,53 @@ export default function App() {
                                 >
                                   {isUploadingReview ? <Loader2 className="animate-spin" size={14} /> : <Upload size={14} />}
                                   {data?.reviewAudioUrl ? 'Replace Review' : 'Upload Review'}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* 3. Group & Version */}
+                        {(data?.group || data?.version) && (
+                          <div className="flex gap-4 mb-6 pb-4 border-b border-stone-100">
+                             {data?.group && <p className="font-bold text-stone-900">{data.group}</p>}
+                             {data?.version && <p className="font-bold text-stone-500">{data.version}</p>}
+                          </div>
+                        )}
+
+                        {/* 4. SCRIPTURE READING (Moved Below Group/Version) */}
+                        {(data?.audioUrl || isAdmin) && (
+                          <div className="mb-8 bg-stone-50 rounded-xl p-4 border border-stone-100">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className="p-2 bg-indigo-100 text-indigo-600 rounded-full">
+                                <Headphones size={16} />
+                              </div>
+                              <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">Scripture Reading</span>
+                            </div>
+                            
+                            {data?.audioUrl ? (
+                              <audio controls src={data.audioUrl} className="w-full h-10" />
+                            ) : (
+                              <div className="text-xs text-stone-400 italic py-2 text-center">No reading audio.</div>
+                            )}
+
+                            {/* Upload Button */}
+                            {isAdmin && (
+                              <div className="mt-3 pt-3 border-t border-stone-200/50">
+                                <input 
+                                  type="file" 
+                                  accept="audio/*" 
+                                  className="hidden" 
+                                  ref={readingInputRef}
+                                  onChange={(e) => handleFileSelect(e, 'reading')}
+                                />
+                                <button 
+                                  onClick={() => readingInputRef.current?.click()}
+                                  disabled={isUploadingReading}
+                                  className="w-full py-2 text-sm bg-stone-900 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-stone-800 transition-colors"
+                                >
+                                  {isUploadingReading ? <Loader2 className="animate-spin" size={14} /> : <Upload size={14} />}
+                                  {data?.audioUrl ? 'Replace Audio' : 'Upload Audio'}
                                 </button>
                               </div>
                             )}
