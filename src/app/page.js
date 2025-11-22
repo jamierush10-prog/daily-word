@@ -16,7 +16,7 @@ import {
   Upload,
   Headphones,
   MessageCircle,
-  Menu // NEW: Menu Icon
+  Menu 
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { 
@@ -53,7 +53,6 @@ const firebaseConfig = {
   measurementId: "G-SBW8PPLTQ0"
 };
 
-
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -62,7 +61,6 @@ const storage = getStorage(app);
 
 // --- Helper Functions (Timezone Fixed) ---
 
-// Fix 1: Ensure date strings are generated from local time, not UTC
 const formatDate = (date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -79,13 +77,8 @@ const getDisplayDate = (date) => {
   });
 };
 
-// Fix 2: Calculate day number using Noon to avoid DST/Timezone shifts
 const getDayNumber = (currentDate) => {
-  // Set start date to Noon to be safe from timezone shifts
-  // UPDATED: Start date changed to November 22, 2025
   const startDate = new Date('2025-11-22T12:00:00'); 
-  
-  // Create a copy of current date and set to Noon
   const target = new Date(currentDate);
   target.setHours(12, 0, 0, 0);
 
@@ -122,7 +115,7 @@ export default function App() {
 
   // UI State
   const [showSearch, setShowSearch] = useState(false);
-  const [showMenu, setShowMenu] = useState(false); // NEW: Menu State
+  const [showMenu, setShowMenu] = useState(false); 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -322,9 +315,6 @@ export default function App() {
       <header className="bg-white border-b border-stone-200 p-4 shadow-sm flex items-center justify-between sticky top-0 z-30">
         {/* NEW: Menu + Search Buttons */}
         <div className="flex items-center gap-2">
-           <button onClick={() => setShowMenu(true)} className="p-2 rounded-full hover:bg-stone-100 text-stone-600 transition-colors">
-             <Menu size={24} />
-           </button>
            <button onClick={() => setShowSearch(true)} className="p-2 rounded-full hover:bg-stone-100 text-stone-400 transition-colors">
              <Search size={24} />
            </button>
@@ -513,16 +503,9 @@ export default function App() {
                           </div>
                         )}
 
-                        {/* 4. Scripture Text */}
-                        <div className="prose prose-stone max-w-none flex-1 mb-8">
-                           <div className="text-xl md:text-2xl font-serif leading-relaxed text-stone-800 whitespace-pre-wrap">
-                             {renderScripture(data?.scripture)}
-                           </div>
-                        </div>
-
-                        {/* 5. Review Audio (Bottom) */}
+                        {/* 4. TODAY'S THOUGHT (Moved above Text) */}
                         {(data?.reviewAudioUrl || isAdmin) && (
-                          <div className="mt-auto bg-stone-50 rounded-xl p-4 border border-stone-100">
+                          <div className="mb-8 bg-stone-50 rounded-xl p-4 border border-stone-100">
                             <div className="flex items-center gap-3 mb-2">
                               <div className="p-2 bg-rose-100 text-rose-600 rounded-full">
                                 <MessageCircle size={16} />
@@ -559,6 +542,13 @@ export default function App() {
                           </div>
                         )}
 
+                        {/* 5. Scripture Text (Moved to Bottom) */}
+                        <div className="prose prose-stone max-w-none flex-1">
+                           <div className="text-xl md:text-2xl font-serif leading-relaxed text-stone-800 whitespace-pre-wrap">
+                             {renderScripture(data?.scripture)}
+                           </div>
+                        </div>
+
                       </div>
                     )}
                   </div>
@@ -571,36 +561,6 @@ export default function App() {
       </main>
 
       {/* --- Modals --- */}
-
-      {/* Menu Modal (New) */}
-      {showMenu && (
-        <div className="fixed inset-0 bg-white z-50 flex flex-col animate-in slide-in-from-left duration-200">
-           <div className="p-4 border-b border-stone-200 flex items-center justify-between">
-             <h2 className="text-xl font-serif font-bold">About This Plan</h2>
-             <button onClick={() => setShowMenu(false)}><X size={24} /></button>
-           </div>
-           
-           <div className="p-6 flex-1 overflow-y-auto prose prose-stone">
-              <h3>Welcome to Daily Word</h3>
-              <p>This reading plan is designed to take us through the Bible in one year, starting from November 21, 2025.</p>
-              
-              <h4>How to use this app:</h4>
-              <ul>
-                <li><strong>Read:</strong> The daily scripture is displayed on the card.</li>
-                <li><strong>Listen:</strong> Click the play button to hear the chapter read aloud.</li>
-                <li><strong>Reflect:</strong> Listen to the Chapter Review for additional insights.</li>
-              </ul>
-
-              <h4>Formatting Tips:</h4>
-              <p>When editing, you can use special codes to format the text:</p>
-              <ul>
-                <li><code>**text**</code> makes text <strong>bold</strong></li>
-                <li><code>::text::</code> makes text <span className="text-red-600">red</span></li>
-                <li><code>_text_</code> makes text <em>italic</em></li>
-              </ul>
-           </div>
-        </div>
-      )}
 
       {/* Login Modal */}
       {showLogin && (
