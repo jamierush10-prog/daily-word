@@ -52,7 +52,6 @@ const firebaseConfig = {
   measurementId: "G-SBW8PPLTQ0"
 };
 
-
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -366,7 +365,7 @@ export default function App() {
                </div>
             ) : (
               <>
-                {/* Edit Button - Restored! */}
+                {/* Edit Button */}
                 {isAdmin && !isEditing && (
                   <button 
                     onClick={() => setIsEditing(true)} 
@@ -394,6 +393,7 @@ export default function App() {
                   <div className="p-8 flex-1 flex flex-col">
                     {isEditing ? (
                       <div className="flex flex-col h-full gap-4">
+                        {/* Header Input (Top) */}
                         <input
                           type="text"
                           className="w-full border border-stone-300 rounded-lg p-4 font-serif text-xl font-bold placeholder:font-normal focus:ring-2 focus:ring-stone-500 focus:outline-none bg-stone-50"
@@ -401,13 +401,8 @@ export default function App() {
                           onChange={(e) => setEditHeader(e.target.value)}
                           placeholder="Title (e.g., John 1: 1-19)"
                         />
-                        <textarea 
-                          className="w-full flex-1 border border-stone-300 rounded-lg p-4 font-serif text-lg resize-none focus:ring-2 focus:ring-stone-500 focus:outline-none bg-stone-50 min-h-[200px]"
-                          value={editScripture}
-                          onChange={(e) => setEditScripture(e.target.value)}
-                          placeholder="Paste scripture here..."
-                        />
-                        <p className="text-xs text-stone-400">Tip: **bold**, ::red::, or _italic_</p>
+                        
+                        {/* Controls (Middle) */}
                         <div className="flex items-center gap-3 pt-2">
                            <input
                               type="text"
@@ -431,13 +426,22 @@ export default function App() {
                              <Save size={18} /> Save
                            </button>
                         </div>
+
+                        {/* Scripture Input (Bottom) */}
+                        <textarea 
+                          className="w-full flex-1 border border-stone-300 rounded-lg p-4 font-serif text-lg resize-none focus:ring-2 focus:ring-stone-500 focus:outline-none bg-stone-50 min-h-[200px]"
+                          value={editScripture}
+                          onChange={(e) => setEditScripture(e.target.value)}
+                          placeholder="Paste scripture here..."
+                        />
+                        <p className="text-xs text-stone-400">Tip: **bold**, ::red::, or _italic_</p>
                       </div>
                     ) : (
                       <div className="flex flex-col h-full">
                         {/* --- TOP SECTION: Header, Audio, Meta --- */}
                         
                         {/* 1. Header */}
-                        <div className="mb-4 pr-10"> {/* Padding right for edit button */}
+                        <div className="mb-4 pr-10"> 
                            <h3 className="text-sm text-stone-400 font-bold uppercase mb-4 tracking-widest">Scripture Reading</h3>
                            {data?.header && (
                              <h2 className="text-2xl md:text-3xl font-serif font-bold text-stone-900 leading-tight">
@@ -446,7 +450,7 @@ export default function App() {
                            )}
                         </div>
 
-                        {/* 2. Reading Audio (MOVED HERE) */}
+                        {/* 2. Reading Audio */}
                         {(data?.audioUrl || isAdmin) && (
                           <div className="mb-6 bg-stone-50 rounded-xl p-4 border border-stone-100">
                             <div className="flex items-center gap-3 mb-2">
@@ -500,7 +504,7 @@ export default function App() {
                            </div>
                         </div>
 
-                        {/* 5. Review Audio (Kept at Bottom) */}
+                        {/* 5. Review Audio (Bottom) */}
                         {(data?.reviewAudioUrl || isAdmin) && (
                           <div className="mt-auto bg-stone-50 rounded-xl p-4 border border-stone-100">
                             <div className="flex items-center gap-3 mb-2">
