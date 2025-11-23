@@ -18,8 +18,8 @@ import {
   MessageCircle,
   Library, 
   Calendar,
-  ChevronDown, // NEW: For collapsible menu
-  ChevronUp    // NEW: For collapsible menu
+  ChevronDown, 
+  ChevronUp    
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { 
@@ -80,11 +80,10 @@ const getDisplayDate = (date) => {
   });
 };
 
-// NEW: Helper to format date string (YYYY-MM-DD) to readable text
 const formatSeriesDate = (dateString) => {
   if (!dateString) return '';
   const [y, m, d] = dateString.split('-').map(Number);
-  const date = new Date(y, m - 1, d, 12, 0, 0); // Noon safe time
+  const date = new Date(y, m - 1, d, 12, 0, 0); 
   return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 };
 
@@ -130,7 +129,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [seriesData, setSeriesData] = useState({}); 
-  const [expandedSeries, setExpandedSeries] = useState({}); // NEW: Track expanded series
+  const [expandedSeries, setExpandedSeries] = useState({}); 
   const [searching, setSearching] = useState(false);
   
   // --- Auth & Initial Load ---
@@ -145,7 +144,6 @@ export default function App() {
   // --- Data Fetching ---
   useEffect(() => {
     if (!user) return;
-    // Only fetch daily data if we are NOT in series view
     if (!showSeriesList) {
         fetchDailyData(currentDate);
     }
@@ -180,13 +178,19 @@ export default function App() {
     }
   };
 
-  // --- Fetch All Series (For Series Page) ---
+  // --- Fetch All Series (Sorted Newest First) ---
   const fetchAllSeries = async () => {
     setLoading(true);
     try {
-        const q = query(collection(db, 'readings'), orderBy('date'));
+        // Fetch all readings ordered by date descending (newest first)
+        const q = query(collection(db, 'readings'), orderBy('date', 'desc'));
         const querySnapshot = await getDocs(q);
+        
+        // Map implies order is preserved in insertion order for modern JS engines
+        // But explicit sorting logic is safer.
         const seriesMap = {};
+        // Array to keep track of order of series appearance (newest date first)
+        const seriesOrder = [];
 
         querySnapshot.forEach((doc) => {
             const d = doc.data();
@@ -194,10 +198,29 @@ export default function App() {
             
             if (!seriesMap[seriesName]) {
                 seriesMap[seriesName] = [];
+                seriesOrder.push(seriesName); // Add new series to ordered list
             }
             seriesMap[seriesName].push(d);
         });
-        setSeriesData(seriesMap);
+        
+        // Sort the readings inside each series by date ascending (Part 1, Part 2...)
+        // Or descending if you prefer newest part first. Usually Parts are 1->N.
+        Object.keys(seriesMap).forEach(key => {
+            seriesMap[key].sort((a, b) => a.date.localeCompare(b.date));
+        });
+
+        // We need to store both the map and the order, or just use an ordered object structure (Map)
+        // For simplicity with React state rendering, we'll attach a special 'order' property or just rely on Object.entries() 
+        // sorting by insertion if we rebuild it carefully.
+        // Better approach: Store as array of objects: [{name: 'Series A', readings: []}, ...]
+        
+        const seriesArray = seriesOrder.map(name => ({
+            name: name,
+            readings: seriesMap[name]
+        }));
+
+        setSeriesData(seriesArray); // Changed state structure to array for guaranteed order
+
     } catch (error) {
         console.error("Error fetching series:", error);
     } finally {
@@ -205,14 +228,12 @@ export default function App() {
     }
   };
 
-  // Trigger fetch when opening Series view
   useEffect(() => {
       if (showSeriesList) {
           fetchAllSeries();
       }
   }, [showSeriesList]);
 
-  // --- NEW: Toggle Series Expansion ---
   const toggleSeries = (seriesName) => {
     setExpandedSeries(prev => ({
       ...prev,
@@ -403,15 +424,15 @@ export default function App() {
         {/* CONDITIONAL RENDER: Series List OR Daily Card */}
         {showSeriesList ? (
             <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-300">
-                <h2 className="text-2xl font-serif font-bold text-stone-900 mb-6 px-2">Series Index</h2>
+                <h2 className="text-2xl font-serif font-bold text-stone-900 mb-6 px-2">Series Library</h2>
                 
                 {loading ? (
                     <div className="flex justify-center p-10"><Loader2 className="animate-spin text-stone-400" /></div>
                 ) : (
                     <div className="space-y-6">
-                        {Object.keys(seriesData).length === 0 && <div className="text-center text-stone-400 italic">No series found.</div>}
+                        {(!seriesData || seriesData.length === 0) && <div className="text-center text-stone-400 italic">No series found.</div>}
                         
-                        {Object.entries(seriesData).map(([seriesName, days]) => (
+                        {Array.isArray(seriesData) && seriesData.map(({ name: seriesName, readings: days }) => (
                             <div key={seriesName} className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
                                 {/* Series Header - Click to Expand */}
                                 <div 
@@ -420,7 +441,8 @@ export default function App() {
                                 >
                                     <div>
                                         <h3 className="font-bold text-lg text-stone-800">{seriesName}</h3>
-                                        <span className="text-xs text-stone-500 uppercase tracking-wider">{days.length} Readings</span>
+                                        {/* UPDATED: "Parts" instead of "Readings" */}
+                                        <span className="text-xs text-stone-500 uppercase tracking-wider">{days.length} {days.length === 1 ? 'Part' : 'Parts'}</span>
                                     </div>
                                     <div className="text-stone-400">
                                       {expandedSeries[seriesName] ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -444,7 +466,6 @@ export default function App() {
                                               <div>
                                                   <div className="text-sm font-bold text-stone-900 mb-1">
                                                     {day.group || `Part ${idx + 1}`}
-                                                    {/* NEW: Added Date next to Part */}
                                                     <span className="font-normal text-stone-500 ml-2"> - {formatSeriesDate(day.date)}</span>
                                                   </div>
                                                   <div className="text-sm text-stone-500 font-serif">{day.header}</div>
@@ -528,7 +549,7 @@ export default function App() {
                                 className="w-full border border-stone-300 rounded-lg p-4 font-serif text-xl font-bold placeholder:font-normal focus:ring-2 focus:ring-stone-500 focus:outline-none bg-stone-50"
                                 value={editHeader}
                                 onChange={(e) => setEditHeader(e.target.value)}
-                                placeholder="Title (e.g., John 1: 1-19)"
+                                placeholder="Title (e.g., Power to the faint)"
                                 />
                                 
                                 {/* Controls (Middle) */}
