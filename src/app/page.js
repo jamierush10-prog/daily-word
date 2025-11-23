@@ -16,7 +16,8 @@ import {
   Upload,
   Headphones,
   MessageCircle,
-  Menu 
+  Library, // NEW: Library Icon
+  Calendar
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { 
@@ -59,7 +60,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// --- Helper Functions (Timezone Fixed) ---
+// --- Helper Functions ---
 
 const formatDate = (date) => {
   const year = date.getFullYear();
@@ -115,11 +116,11 @@ export default function App() {
 
   // UI State
   const [showSearch, setShowSearch] = useState(false);
-  const [showMenu, setShowMenu] = useState(false); 
+  const [showSeriesList, setShowSeriesList] = useState(false); // NEW: Series List View
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const [searching, setSearching] = useState(false);
-
+  const [seriesData, setSeriesData] = useState({}); // NEW: Store series data
+  
   // --- Auth & Initial Load ---
   useEffect(() => {
     signInAnonymously(auth).catch(err => console.error("Auth error:", err));
@@ -132,8 +133,11 @@ export default function App() {
   // --- Data Fetching ---
   useEffect(() => {
     if (!user) return;
-    fetchDailyData(currentDate);
-  }, [currentDate, user]);
+    // Only fetch daily data if we are NOT in series view
+    if (!showSeriesList) {
+        fetchDailyData(currentDate);
+    }
+  }, [currentDate, user, showSeriesList]);
 
   const fetchDailyData = async (date) => {
     setLoading(true);
@@ -163,6 +167,40 @@ export default function App() {
       setLoading(false);
     }
   };
+
+  // --- Fetch All Series (For Series Page) ---
+  const fetchAllSeries = async () => {
+    setLoading(true);
+    try {
+        const q = query(collection(db, 'readings'), orderBy('date'));
+        const querySnapshot = await getDocs(q);
+        const seriesMap = {};
+
+        querySnapshot.forEach((doc) => {
+            const d = doc.data();
+            // Use 'version' field as Series Name based on previous renaming
+            const seriesName = d.version || 'Uncategorized'; 
+            
+            if (!seriesMap[seriesName]) {
+                seriesMap[seriesName] = [];
+            }
+            seriesMap[seriesName].push(d);
+        });
+        setSeriesData(seriesMap);
+    } catch (error) {
+        console.error("Error fetching series:", error);
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  // Trigger fetch when opening Series view
+  useEffect(() => {
+      if (showSeriesList) {
+          fetchAllSeries();
+      }
+  }, [showSeriesList]);
+
 
   // --- Navigation Handlers ---
   const handlePrevDay = () => {
@@ -314,6 +352,13 @@ export default function App() {
       {/* --- Header --- */}
       <header className="bg-white border-b border-stone-200 p-4 shadow-sm flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-2">
+           {/* Toggle between Calendar View (Default) and Library View (Series) */}
+           <button 
+             onClick={() => setShowSeriesList(!showSeriesList)} 
+             className={`p-2 rounded-full transition-colors ${showSeriesList ? 'bg-stone-100 text-stone-900' : 'text-stone-400 hover:bg-stone-100'}`}
+           >
+             {showSeriesList ? <Calendar size={24} /> : <Library size={24} />}
+           </button>
            <button onClick={() => setShowSearch(true)} className="p-2 rounded-full hover:bg-stone-100 text-stone-400 transition-colors">
              <Search size={24} />
            </button>
@@ -337,230 +382,276 @@ export default function App() {
       {/* --- Main Content Area --- */}
       <main className="p-4 pb-20">
         
-        {/* Date Navigation */}
-        <div className="flex items-center justify-between p-6 bg-white/50 backdrop-blur-sm max-w-2xl mx-auto mb-4">
-          <button onClick={handlePrevDay} className="p-2 rounded-full bg-stone-100 text-stone-600 shadow-sm active:scale-95 transition-transform">
-            <ChevronLeft size={28} />
-          </button>
-          <div className="text-center flex flex-col items-center">
-             {dayNumber > 0 && (
-               <span className="text-xs font-bold bg-stone-200 text-stone-600 px-2 py-0.5 rounded-full mb-1">
-                 Day {dayNumber}
-               </span>
-             )}
-            <div className="text-sm text-stone-500 uppercase tracking-widest font-semibold">
-              {currentDate.toLocaleDateString('en-US', { weekday: 'long' })}
-            </div>
-            <div className="text-xl font-serif text-stone-800">
-              {currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-            </div>
-          </div>
-          <button onClick={handleNextDay} className="p-2 rounded-full bg-stone-100 text-stone-600 shadow-sm active:scale-95 transition-transform">
-            <ChevronRight size={28} />
-          </button>
-        </div>
-
-        {/* Scripture Card */}
-        <div className="max-w-2xl mx-auto w-full">
-          <div className="bg-white rounded-2xl shadow-xl border border-stone-100 overflow-hidden min-h-[300px] flex flex-col relative">
-            {loading ? (
-               <div className="flex-1 flex flex-col items-center justify-center text-stone-400 p-10 min-h-[300px]">
-                 <Loader2 className="animate-spin mb-2" size={32} />
-                 <p>Loading scripture...</p>
-               </div>
-            ) : (
-              <>
-                {/* Edit Button */}
-                {isAdmin && !isEditing && (
-                  <button 
-                    onClick={() => setIsEditing(true)} 
-                    className="absolute top-6 right-6 p-2 text-stone-300 hover:text-stone-600 z-10 bg-white/80 rounded-full backdrop-blur-sm"
-                  >
-                    <Edit2 size={20} />
-                  </button>
-                )}
-
-                {/* Empty State / Edit Mode */}
-                {(!data?.scripture && !isEditing && !data?.header) ? (
-                  <div className="flex-1 flex flex-col items-center justify-center p-10 text-center min-h-[300px]">
-                    <p className="text-stone-400 mb-4 italic">No scripture added for this day.</p>
-                    {isAdmin && (
-                      <button 
-                        onClick={() => setIsEditing(true)} 
-                        className="flex items-center gap-2 px-6 py-3 bg-stone-800 text-white rounded-full shadow-lg hover:bg-stone-700 transition-colors"
-                      >
-                        <Edit2 size={18} />
-                        Add Scripture
-                      </button>
-                    )}
-                  </div>
+        {/* CONDITIONAL RENDER: Series List OR Daily Card */}
+        {showSeriesList ? (
+            <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <h2 className="text-2xl font-serif font-bold text-stone-900 mb-6 px-2">Series Index</h2>
+                
+                {loading ? (
+                    <div className="flex justify-center p-10"><Loader2 className="animate-spin text-stone-400" /></div>
                 ) : (
-                  <div className="p-8 flex-1 flex flex-col">
-                    {isEditing ? (
-                      <div className="flex flex-col h-full gap-4">
-                        {/* Header Input (Top) */}
-                        <input
-                          type="text"
-                          className="w-full border border-stone-300 rounded-lg p-4 font-serif text-xl font-bold placeholder:font-normal focus:ring-2 focus:ring-stone-500 focus:outline-none bg-stone-50"
-                          value={editHeader}
-                          onChange={(e) => setEditHeader(e.target.value)}
-                          placeholder="Title (e.g., Power to the faint)"
-                        />
+                    <div className="space-y-8">
+                        {Object.keys(seriesData).length === 0 && <div className="text-center text-stone-400 italic">No series found.</div>}
                         
-                        {/* Controls (Middle) */}
-                        <div className="flex items-center gap-3 pt-2">
-                           <input
-                              type="text"
-                              className="flex-1 border border-stone-300 rounded-lg p-2 font-serif text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-500"
-                              value={editGroup}
-                              onChange={(e) => setEditGroup(e.target.value)}
-                              placeholder="Part (e.g. Part 2)"
-                           />
-                           <input
-                              type="text"
-                              className="flex-1 border border-stone-300 rounded-lg p-2 font-serif text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-500"
-                              value={editVersion}
-                              onChange={(e) => setEditVersion(e.target.value)}
-                              placeholder="Series (e.g. Staying Connected...)"
-                           />
-                           <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-stone-500">Cancel</button>
-                           <button 
-                             onClick={handleSaveScripture} 
-                             className="px-6 py-2 bg-green-600 text-white rounded-lg flex items-center gap-2 shadow-md hover:bg-green-700"
-                           >
-                             <Save size={18} /> Save
-                           </button>
-                        </div>
-
-                        {/* Scripture Input (Bottom) */}
-                        <textarea 
-                          className="w-full flex-1 border border-stone-300 rounded-lg p-4 font-serif text-lg resize-none focus:ring-2 focus:ring-stone-500 focus:outline-none bg-stone-50 min-h-[200px]"
-                          value={editScripture}
-                          onChange={(e) => setEditScripture(e.target.value)}
-                          placeholder="Paste scripture here..."
-                        />
-                        <p className="text-xs text-stone-400">Tip: **bold**, ::red::, or _italic_</p>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col h-full">
-                        
-                        {/* 1. Header (Title) & Series Name (Label) */}
-                        <div className="mb-6 px-4 pt-6"> 
-                           {/* Series Name (Version) moved to Top Label */}
-                           {data?.version && (
-                             <h3 className="text-sm text-stone-400 font-bold uppercase mb-2 tracking-widest">
-                               {data.version}
-                             </h3>
-                           )}
-                           
-                           {/* Title */}
-                           {data?.header && (
-                             <h2 className="text-3xl md:text-4xl font-serif font-bold text-stone-900 leading-tight mb-2">
-                               {data.header}
-                             </h2>
-                           )}
-
-                           {/* Part Number (Group) stays here */}
-                           {data?.group && (
-                             <div className="font-bold text-stone-900 text-base">
-                                {data.group}
-                             </div>
-                           )}
-                        </div>
-
-                        {/* 2. Today's Thought Audio (Review) */}
-                        {(data?.reviewAudioUrl || isAdmin) && (
-                          <div className="mb-6 mx-4 bg-stone-50 rounded-xl p-4 border border-stone-100">
-                            <div className="flex items-center gap-3 mb-2">
-                              <div className="p-2 bg-rose-100 text-rose-600 rounded-full">
-                                <MessageCircle size={16} />
-                              </div>
-                              <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">Today's Thought</span>
+                        {Object.entries(seriesData).map(([seriesName, days]) => (
+                            <div key={seriesName} className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
+                                <div className="bg-stone-50 p-4 border-b border-stone-200">
+                                    <h3 className="font-bold text-lg text-stone-800">{seriesName}</h3>
+                                    <span className="text-xs text-stone-500 uppercase tracking-wider">{days.length} Readings</span>
+                                </div>
+                                <div className="divide-y divide-stone-100">
+                                    {days.map((day, idx) => (
+                                        <button 
+                                            key={idx}
+                                            onClick={() => {
+                                                // Create date in local timezone safely to avoid "day behind" issue
+                                                const [y, m, d] = day.date.split('-').map(Number);
+                                                const safeDate = new Date(y, m - 1, d, 12, 0, 0); 
+                                                setCurrentDate(safeDate);
+                                                setShowSeriesList(false);
+                                            }}
+                                            className="w-full text-left p-4 hover:bg-stone-50 transition-colors flex items-center justify-between group"
+                                        >
+                                            <div>
+                                                <div className="text-sm font-bold text-stone-900">{day.group || `Part ${idx + 1}`}</div>
+                                                <div className="text-sm text-stone-500 font-serif">{day.header}</div>
+                                            </div>
+                                            <ChevronRight size={16} className="text-stone-300 group-hover:text-stone-600" />
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                            
-                            {data?.reviewAudioUrl ? (
-                              <audio controls src={data.reviewAudioUrl} className="w-full h-10" />
-                            ) : (
-                              <div className="text-xs text-stone-400 italic py-2 text-center">No review audio.</div>
-                            )}
-
-                            {/* Upload Button */}
-                            {isAdmin && (
-                              <div className="mt-3 pt-3 border-t border-stone-200/50">
-                                <input 
-                                  type="file" 
-                                  accept="audio/*" 
-                                  className="hidden" 
-                                  ref={reviewInputRef}
-                                  onChange={(e) => handleFileSelect(e, 'review')}
-                                />
-                                <button 
-                                  onClick={() => reviewInputRef.current?.click()}
-                                  disabled={isUploadingReview}
-                                  className="w-full py-2 text-sm bg-stone-900 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-stone-800 transition-colors"
-                                >
-                                  {isUploadingReview ? <Loader2 className="animate-spin" size={14} /> : <Upload size={14} />}
-                                  {data?.reviewAudioUrl ? 'Replace Review' : 'Upload Review'}
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* 3. Scripture Reading Audio (Listen) */}
-                        {(data?.audioUrl || isAdmin) && (
-                          <div className="mb-8 mx-4 bg-stone-50 rounded-xl p-4 border border-stone-100">
-                            <div className="flex items-center gap-3 mb-2">
-                              <div className="p-2 bg-indigo-100 text-indigo-600 rounded-full">
-                                <Headphones size={16} />
-                              </div>
-                              <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">Scripture Reading</span>
-                            </div>
-                            
-                            {data?.audioUrl ? (
-                              <audio controls src={data.audioUrl} className="w-full h-10" />
-                            ) : (
-                              <div className="text-xs text-stone-400 italic py-2 text-center">No reading audio.</div>
-                            )}
-
-                            {/* Upload Button */}
-                            {isAdmin && (
-                              <div className="mt-3 pt-3 border-t border-stone-200/50">
-                                <input 
-                                  type="file" 
-                                  accept="audio/*" 
-                                  className="hidden" 
-                                  ref={readingInputRef}
-                                  onChange={(e) => handleFileSelect(e, 'reading')}
-                                />
-                                <button 
-                                  onClick={() => readingInputRef.current?.click()}
-                                  disabled={isUploadingReading}
-                                  className="w-full py-2 text-sm bg-stone-900 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-stone-800 transition-colors"
-                                >
-                                  {isUploadingReading ? <Loader2 className="animate-spin" size={14} /> : <Upload size={14} />}
-                                  {data?.audioUrl ? 'Replace Audio' : 'Upload Audio'}
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* 4. Scripture Text (Read) */}
-                        <div className="prose prose-stone max-w-none flex-1 px-4 pb-8">
-                           <div className="text-xl md:text-2xl font-serif leading-relaxed text-stone-800 whitespace-pre-wrap">
-                             {renderScripture(data?.scripture)}
-                           </div>
-                        </div>
-
-                      </div>
-                    )}
-                  </div>
+                        ))}
+                    </div>
                 )}
-              </>
-            )}
-          </div>
-        </div>
+            </div>
+        ) : (
+            <>
+                {/* Date Navigation */}
+                <div className="flex items-center justify-between p-6 bg-white/50 backdrop-blur-sm max-w-2xl mx-auto mb-4">
+                <button onClick={handlePrevDay} className="p-2 rounded-full bg-stone-100 text-stone-600 shadow-sm active:scale-95 transition-transform">
+                    <ChevronLeft size={28} />
+                </button>
+                <div className="text-center flex flex-col items-center">
+                    {dayNumber > 0 && (
+                    <span className="text-xs font-bold bg-stone-200 text-stone-600 px-2 py-0.5 rounded-full mb-1">
+                        Day {dayNumber}
+                    </span>
+                    )}
+                    <div className="text-sm text-stone-500 uppercase tracking-widest font-semibold">
+                    {currentDate.toLocaleDateString('en-US', { weekday: 'long' })}
+                    </div>
+                    <div className="text-xl font-serif text-stone-800">
+                    {currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </div>
+                </div>
+                <button onClick={handleNextDay} className="p-2 rounded-full bg-stone-100 text-stone-600 shadow-sm active:scale-95 transition-transform">
+                    <ChevronRight size={28} />
+                </button>
+                </div>
+
+                {/* Scripture Card */}
+                <div className="max-w-2xl mx-auto w-full">
+                <div className="bg-white rounded-2xl shadow-xl border border-stone-100 overflow-hidden min-h-[300px] flex flex-col relative">
+                    {loading ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-stone-400 p-10 min-h-[300px]">
+                        <Loader2 className="animate-spin mb-2" size={32} />
+                        <p>Loading scripture...</p>
+                    </div>
+                    ) : (
+                    <>
+                        {/* Edit Button */}
+                        {isAdmin && !isEditing && (
+                        <button 
+                            onClick={() => setIsEditing(true)} 
+                            className="absolute top-6 right-6 p-2 text-stone-300 hover:text-stone-600 z-10 bg-white/80 rounded-full backdrop-blur-sm"
+                        >
+                            <Edit2 size={20} />
+                        </button>
+                        )}
+
+                        {/* Empty State / Edit Mode */}
+                        {(!data?.scripture && !isEditing && !data?.header) ? (
+                        <div className="flex-1 flex flex-col items-center justify-center p-10 text-center min-h-[300px]">
+                            <p className="text-stone-400 mb-4 italic">No scripture added for this day.</p>
+                            {isAdmin && (
+                            <button 
+                                onClick={() => setIsEditing(true)} 
+                                className="flex items-center gap-2 px-6 py-3 bg-stone-800 text-white rounded-full shadow-lg hover:bg-stone-700 transition-colors"
+                            >
+                                <Edit2 size={18} />
+                                Add Scripture
+                            </button>
+                            )}
+                        </div>
+                        ) : (
+                        <div className="p-8 flex-1 flex flex-col">
+                            {isEditing ? (
+                            <div className="flex flex-col h-full gap-4">
+                                {/* Header Input (Top) */}
+                                <input
+                                type="text"
+                                className="w-full border border-stone-300 rounded-lg p-4 font-serif text-xl font-bold placeholder:font-normal focus:ring-2 focus:ring-stone-500 focus:outline-none bg-stone-50"
+                                value={editHeader}
+                                onChange={(e) => setEditHeader(e.target.value)}
+                                placeholder="Title (e.g., John 1: 1-19)"
+                                />
+                                
+                                {/* Controls (Middle) */}
+                                <div className="flex items-center gap-3 pt-2">
+                                <input
+                                    type="text"
+                                    className="flex-1 border border-stone-300 rounded-lg p-2 font-serif text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-500"
+                                    value={editGroup}
+                                    onChange={(e) => setEditGroup(e.target.value)}
+                                    placeholder="Part (e.g. Part 2)"
+                                />
+                                <input
+                                    type="text"
+                                    className="flex-1 border border-stone-300 rounded-lg p-2 font-serif text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-500"
+                                    value={editVersion}
+                                    onChange={(e) => setEditVersion(e.target.value)}
+                                    placeholder="Series (e.g. Staying Connected...)"
+                                />
+                                <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-stone-500">Cancel</button>
+                                <button 
+                                    onClick={handleSaveScripture} 
+                                    className="px-6 py-2 bg-green-600 text-white rounded-lg flex items-center gap-2 shadow-md hover:bg-green-700"
+                                >
+                                    <Save size={18} /> Save
+                                </button>
+                                </div>
+
+                                {/* Scripture Input (Bottom) */}
+                                <textarea 
+                                className="w-full flex-1 border border-stone-300 rounded-lg p-4 font-serif text-lg resize-none focus:ring-2 focus:ring-stone-500 focus:outline-none bg-stone-50 min-h-[200px]"
+                                value={editScripture}
+                                onChange={(e) => setEditScripture(e.target.value)}
+                                placeholder="Paste scripture here..."
+                                />
+                                <p className="text-xs text-stone-400">Tip: **bold**, ::red::, or _italic_</p>
+                            </div>
+                            ) : (
+                            <div className="flex flex-col h-full">
+                                {/* 1. Header (Title) & Series Name (Label) */}
+                                <div className="mb-6 px-4 pt-6"> 
+                                {/* Series Name (Version) moved to Top Label */}
+                                {data?.version && (
+                                    <h3 className="text-sm text-stone-400 font-bold uppercase mb-2 tracking-widest">
+                                    {data.version}
+                                    </h3>
+                                )}
+                                
+                                {/* Title */}
+                                {data?.header && (
+                                    <h2 className="text-3xl md:text-4xl font-serif font-bold text-stone-900 leading-tight mb-2">
+                                    {data.header}
+                                    </h2>
+                                )}
+
+                                {/* Part Number (Group) stays here */}
+                                {data?.group && (
+                                    <div className="font-bold text-stone-900 text-base">
+                                        {data.group}
+                                    </div>
+                                )}
+                                </div>
+
+                                {/* 2. Today's Thought Audio (Review) */}
+                                {(data?.reviewAudioUrl || isAdmin) && (
+                                <div className="mb-6 mx-4 bg-stone-50 rounded-xl p-4 border border-stone-100">
+                                    <div className="flex items-center gap-3 mb-2">
+                                    <div className="p-2 bg-rose-100 text-rose-600 rounded-full">
+                                        <MessageCircle size={16} />
+                                    </div>
+                                    <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">Today's Thought</span>
+                                    </div>
+                                    
+                                    {data?.reviewAudioUrl ? (
+                                    <audio controls src={data.reviewAudioUrl} className="w-full h-10" />
+                                    ) : (
+                                    <div className="text-xs text-stone-400 italic py-2 text-center">No review audio.</div>
+                                    )}
+
+                                    {/* Upload Button */}
+                                    {isAdmin && (
+                                    <div className="mt-3 pt-3 border-t border-stone-200/50">
+                                        <input 
+                                        type="file" 
+                                        accept="audio/*" 
+                                        className="hidden" 
+                                        ref={reviewInputRef}
+                                        onChange={(e) => handleFileSelect(e, 'review')}
+                                        />
+                                        <button 
+                                        onClick={() => reviewInputRef.current?.click()}
+                                        disabled={isUploadingReview}
+                                        className="w-full py-2 text-sm bg-stone-900 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-stone-800 transition-colors"
+                                        >
+                                        {isUploadingReview ? <Loader2 className="animate-spin" size={14} /> : <Upload size={14} />}
+                                        {data?.reviewAudioUrl ? 'Replace Review' : 'Upload Review'}
+                                        </button>
+                                    </div>
+                                    )}
+                                </div>
+                                )}
+
+                                {/* 3. Scripture Reading Audio (Listen) */}
+                                {(data?.audioUrl || isAdmin) && (
+                                <div className="mb-8 mx-4 bg-stone-50 rounded-xl p-4 border border-stone-100">
+                                    <div className="flex items-center gap-3 mb-2">
+                                    <div className="p-2 bg-indigo-100 text-indigo-600 rounded-full">
+                                        <Headphones size={16} />
+                                    </div>
+                                    <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">Scripture Reading</span>
+                                    </div>
+                                    
+                                    {data?.audioUrl ? (
+                                    <audio controls src={data.audioUrl} className="w-full h-10" />
+                                    ) : (
+                                    <div className="text-xs text-stone-400 italic py-2 text-center">No reading audio.</div>
+                                    )}
+
+                                    {/* Upload Button */}
+                                    {isAdmin && (
+                                    <div className="mt-3 pt-3 border-t border-stone-200/50">
+                                        <input 
+                                        type="file" 
+                                        accept="audio/*" 
+                                        className="hidden" 
+                                        ref={readingInputRef}
+                                        onChange={(e) => handleFileSelect(e, 'reading')}
+                                        />
+                                        <button 
+                                        onClick={() => readingInputRef.current?.click()}
+                                        disabled={isUploadingReading}
+                                        className="w-full py-2 text-sm bg-stone-900 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-stone-800 transition-colors"
+                                        >
+                                        {isUploadingReading ? <Loader2 className="animate-spin" size={14} /> : <Upload size={14} />}
+                                        {data?.audioUrl ? 'Replace Audio' : 'Upload Audio'}
+                                        </button>
+                                    </div>
+                                    )}
+                                </div>
+                                )}
+
+                                {/* 4. Scripture Text (Read) */}
+                                <div className="prose prose-stone max-w-none flex-1 px-4 pb-8">
+                                <div className="text-xl md:text-2xl font-serif leading-relaxed text-stone-800 whitespace-pre-wrap">
+                                    {renderScripture(data?.scripture)}
+                                </div>
+                                </div>
+
+                            </div>
+                            )}
+                        </div>
+                        )}
+                    </>
+                    )}
+                </div>
+                </div>
+            </>
+        )}
 
       </main>
 
@@ -577,7 +668,7 @@ export default function App() {
             <form onSubmit={handleLogin}>
               <input 
                 type="password" 
-                placeholder="Enter Password (1234)" 
+                placeholder="Enter Password" 
                 className="w-full border border-stone-200 rounded-lg p-3 mb-4 focus:ring-2 focus:ring-stone-800 outline-none"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
