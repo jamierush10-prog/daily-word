@@ -404,7 +404,7 @@ export default function App() {
                           className="w-full border border-stone-300 rounded-lg p-4 font-serif text-xl font-bold placeholder:font-normal focus:ring-2 focus:ring-stone-500 focus:outline-none bg-stone-50"
                           value={editHeader}
                           onChange={(e) => setEditHeader(e.target.value)}
-                          placeholder="Title (e.g., John 1: 1-19)"
+                          placeholder="Title (e.g., Power to the faint)"
                         />
                         
                         {/* Controls (Middle) */}
@@ -414,14 +414,14 @@ export default function App() {
                               className="flex-1 border border-stone-300 rounded-lg p-2 font-serif text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-500"
                               value={editGroup}
                               onChange={(e) => setEditGroup(e.target.value)}
-                              placeholder="Group (e.g. Group 1)"
+                              placeholder="Part (e.g. Part 2)"
                            />
                            <input
                               type="text"
                               className="flex-1 border border-stone-300 rounded-lg p-2 font-serif text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-500"
                               value={editVersion}
                               onChange={(e) => setEditVersion(e.target.value)}
-                              placeholder="Version (e.g. NIV)"
+                              placeholder="Series (e.g. Staying Connected...)"
                            />
                            <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-stone-500">Cancel</button>
                            <button 
@@ -443,29 +443,19 @@ export default function App() {
                       </div>
                     ) : (
                       <div className="flex flex-col h-full">
-                        {/* --- TOP SECTION: Header, Audio, Meta --- */}
-                        
-                        {/* 1. Header */}
-                        <div className="mb-4 pr-10"> 
+                        {/* 1. Header (Title) */}
+                        <div className="mb-2 px-4 pt-4"> 
                            <h3 className="text-sm text-stone-400 font-bold uppercase mb-4 tracking-widest">Scripture Reading</h3>
                            {data?.header && (
-                             <h2 className="text-2xl md:text-3xl font-serif font-bold text-stone-900 leading-tight">
+                             <h2 className="text-3xl md:text-4xl font-serif font-bold text-stone-900 leading-tight">
                                {data.header}
                              </h2>
                            )}
                         </div>
 
-                        {/* 2. Group & Version (Moved Up) */}
-                        {(data?.group || data?.version) && (
-                          <div className="flex gap-4 mb-6 pb-4 border-b border-stone-100">
-                             {data?.group && <p className="font-bold text-stone-900">{data.group}</p>}
-                             {data?.version && <p className="font-bold text-stone-500">{data.version}</p>}
-                          </div>
-                        )}
-
-                        {/* 3. TODAY'S THOUGHT (Moved Down 1 spot) */}
+                        {/* 2. Today's Thought Audio (Review) */}
                         {(data?.reviewAudioUrl || isAdmin) && (
-                          <div className="mb-6 bg-stone-50 rounded-xl p-4 border border-stone-100">
+                          <div className="mb-6 mx-4 bg-stone-50 rounded-xl p-4 border border-stone-100">
                             <div className="flex items-center gap-3 mb-2">
                               <div className="p-2 bg-rose-100 text-rose-600 rounded-full">
                                 <MessageCircle size={16} />
@@ -502,9 +492,17 @@ export default function App() {
                           </div>
                         )}
 
-                        {/* 4. SCRIPTURE READING */}
+                        {/* 3. Part / Series (Tags) */}
+                        {(data?.group || data?.version) && (
+                          <div className="flex items-baseline gap-3 mb-6 px-4">
+                             {data?.group && <span className="font-bold text-stone-900 text-lg">{data.group}</span>}
+                             {data?.version && <span className="font-medium text-stone-500 text-lg">{data.version}</span>}
+                          </div>
+                        )}
+
+                        {/* 4. Scripture Reading Audio (Listen) */}
                         {(data?.audioUrl || isAdmin) && (
-                          <div className="mb-8 bg-stone-50 rounded-xl p-4 border border-stone-100">
+                          <div className="mb-8 mx-4 bg-stone-50 rounded-xl p-4 border border-stone-100">
                             <div className="flex items-center gap-3 mb-2">
                               <div className="p-2 bg-indigo-100 text-indigo-600 rounded-full">
                                 <Headphones size={16} />
@@ -541,8 +539,8 @@ export default function App() {
                           </div>
                         )}
 
-                        {/* 5. Scripture Text */}
-                        <div className="prose prose-stone max-w-none flex-1 mb-8">
+                        {/* 5. Scripture Text (Read) */}
+                        <div className="prose prose-stone max-w-none flex-1 px-4 pb-8">
                            <div className="text-xl md:text-2xl font-serif leading-relaxed text-stone-800 whitespace-pre-wrap">
                              {renderScripture(data?.scripture)}
                            </div>
