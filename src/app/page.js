@@ -453,16 +453,7 @@ export default function App() {
                            )}
                         </div>
 
-                        {/* 2. Part / Series (Tags) */}
-                        {/* UPDATED STYLE: Smaller font for mobile, tight spacing */}
-                        {(data?.group || data?.version) && (
-                          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-6 px-4">
-                             {data?.group && <span className="font-bold text-stone-900 text-base md:text-lg">{data.group}</span>}
-                             {data?.version && <span className="font-medium text-stone-500 text-base md:text-lg">{data.version}</span>}
-                          </div>
-                        )}
-
-                        {/* 3. Today's Thought Audio (Review) */}
+                        {/* 2. Today's Thought Audio (Review) */}
                         {(data?.reviewAudioUrl || isAdmin) && (
                           <div className="mb-6 mx-4 bg-stone-50 rounded-xl p-4 border border-stone-100">
                             <div className="flex items-center gap-3 mb-2">
@@ -498,6 +489,15 @@ export default function App() {
                                 </button>
                               </div>
                             )}
+                          </div>
+                        )}
+
+                        {/* 3. Part / Series (Tags) */}
+                        {/* UPDATED STYLE: Smaller font for mobile (text-sm), tight spacing */}
+                        {(data?.group || data?.version) && (
+                          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-6 px-4">
+                             {data?.group && <span className="font-bold text-stone-900 text-sm md:text-base">{data.group}</span>}
+                             {data?.version && <span className="font-medium text-stone-500 text-sm md:text-base">{data.version}</span>}
                           </div>
                         )}
 
