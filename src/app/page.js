@@ -444,8 +444,7 @@ export default function App() {
                     ) : (
                       <div className="flex flex-col h-full">
                         {/* 1. Header (Title) */}
-                        <div className="mb-2 px-4 pt-4"> 
-                           <h3 className="text-sm text-stone-400 font-bold uppercase mb-4 tracking-widest">Scripture Reading</h3>
+                        <div className="mb-2 px-4 pt-6"> 
                            {data?.header && (
                              <h2 className="text-3xl md:text-4xl font-serif font-bold text-stone-900 leading-tight">
                                {data.header}
