@@ -16,8 +16,10 @@ import {
   Upload,
   Headphones,
   MessageCircle,
-  Library, // NEW: Library Icon
-  Calendar
+  Library, 
+  Calendar,
+  ChevronDown, // NEW: For collapsible menu
+  ChevronUp    // NEW: For collapsible menu
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { 
@@ -78,6 +80,14 @@ const getDisplayDate = (date) => {
   });
 };
 
+// NEW: Helper to format date string (YYYY-MM-DD) to readable text
+const formatSeriesDate = (dateString) => {
+  if (!dateString) return '';
+  const [y, m, d] = dateString.split('-').map(Number);
+  const date = new Date(y, m - 1, d, 12, 0, 0); // Noon safe time
+  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+};
+
 const getDayNumber = (currentDate) => {
   const startDate = new Date('2025-11-22T12:00:00'); 
   const target = new Date(currentDate);
@@ -116,10 +126,12 @@ export default function App() {
 
   // UI State
   const [showSearch, setShowSearch] = useState(false);
-  const [showSeriesList, setShowSeriesList] = useState(false); // NEW: Series List View
+  const [showSeriesList, setShowSeriesList] = useState(false); 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const [seriesData, setSeriesData] = useState({}); // NEW: Store series data
+  const [seriesData, setSeriesData] = useState({}); 
+  const [expandedSeries, setExpandedSeries] = useState({}); // NEW: Track expanded series
+  const [searching, setSearching] = useState(false);
   
   // --- Auth & Initial Load ---
   useEffect(() => {
@@ -178,7 +190,6 @@ export default function App() {
 
         querySnapshot.forEach((doc) => {
             const d = doc.data();
-            // Use 'version' field as Series Name based on previous renaming
             const seriesName = d.version || 'Uncategorized'; 
             
             if (!seriesMap[seriesName]) {
@@ -200,6 +211,14 @@ export default function App() {
           fetchAllSeries();
       }
   }, [showSeriesList]);
+
+  // --- NEW: Toggle Series Expansion ---
+  const toggleSeries = (seriesName) => {
+    setExpandedSeries(prev => ({
+      ...prev,
+      [seriesName]: !prev[seriesName]
+    }));
+  };
 
 
   // --- Navigation Handlers ---
@@ -352,7 +371,6 @@ export default function App() {
       {/* --- Header --- */}
       <header className="bg-white border-b border-stone-200 p-4 shadow-sm flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-2">
-           {/* Toggle between Calendar View (Default) and Library View (Series) */}
            <button 
              onClick={() => setShowSeriesList(!showSeriesList)} 
              className={`p-2 rounded-full transition-colors ${showSeriesList ? 'bg-stone-100 text-stone-900' : 'text-stone-400 hover:bg-stone-100'}`}
@@ -390,36 +408,52 @@ export default function App() {
                 {loading ? (
                     <div className="flex justify-center p-10"><Loader2 className="animate-spin text-stone-400" /></div>
                 ) : (
-                    <div className="space-y-8">
+                    <div className="space-y-6">
                         {Object.keys(seriesData).length === 0 && <div className="text-center text-stone-400 italic">No series found.</div>}
                         
                         {Object.entries(seriesData).map(([seriesName, days]) => (
                             <div key={seriesName} className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
-                                <div className="bg-stone-50 p-4 border-b border-stone-200">
-                                    <h3 className="font-bold text-lg text-stone-800">{seriesName}</h3>
-                                    <span className="text-xs text-stone-500 uppercase tracking-wider">{days.length} Readings</span>
+                                {/* Series Header - Click to Expand */}
+                                <div 
+                                  className="bg-stone-50 p-4 flex items-center justify-between cursor-pointer hover:bg-stone-100 transition-colors"
+                                  onClick={() => toggleSeries(seriesName)}
+                                >
+                                    <div>
+                                        <h3 className="font-bold text-lg text-stone-800">{seriesName}</h3>
+                                        <span className="text-xs text-stone-500 uppercase tracking-wider">{days.length} Readings</span>
+                                    </div>
+                                    <div className="text-stone-400">
+                                      {expandedSeries[seriesName] ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    </div>
                                 </div>
-                                <div className="divide-y divide-stone-100">
-                                    {days.map((day, idx) => (
-                                        <button 
-                                            key={idx}
-                                            onClick={() => {
-                                                // Create date in local timezone safely to avoid "day behind" issue
-                                                const [y, m, d] = day.date.split('-').map(Number);
-                                                const safeDate = new Date(y, m - 1, d, 12, 0, 0); 
-                                                setCurrentDate(safeDate);
-                                                setShowSeriesList(false);
-                                            }}
-                                            className="w-full text-left p-4 hover:bg-stone-50 transition-colors flex items-center justify-between group"
-                                        >
-                                            <div>
-                                                <div className="text-sm font-bold text-stone-900">{day.group || `Part ${idx + 1}`}</div>
-                                                <div className="text-sm text-stone-500 font-serif">{day.header}</div>
-                                            </div>
-                                            <ChevronRight size={16} className="text-stone-300 group-hover:text-stone-600" />
-                                        </button>
-                                    ))}
-                                </div>
+
+                                {/* Expandable List */}
+                                {expandedSeries[seriesName] && (
+                                  <div className="divide-y divide-stone-100 animate-in slide-in-from-top-2 duration-200">
+                                      {days.map((day, idx) => (
+                                          <button 
+                                              key={idx}
+                                              onClick={() => {
+                                                  const [y, m, d] = day.date.split('-').map(Number);
+                                                  const safeDate = new Date(y, m - 1, d, 12, 0, 0); 
+                                                  setCurrentDate(safeDate);
+                                                  setShowSeriesList(false);
+                                              }}
+                                              className="w-full text-left p-4 hover:bg-stone-50 transition-colors flex items-center justify-between group"
+                                          >
+                                              <div>
+                                                  <div className="text-sm font-bold text-stone-900 mb-1">
+                                                    {day.group || `Part ${idx + 1}`}
+                                                    {/* NEW: Added Date next to Part */}
+                                                    <span className="font-normal text-stone-500 ml-2"> - {formatSeriesDate(day.date)}</span>
+                                                  </div>
+                                                  <div className="text-sm text-stone-500 font-serif">{day.header}</div>
+                                              </div>
+                                              <ChevronRight size={16} className="text-stone-300 group-hover:text-stone-600" />
+                                          </button>
+                                      ))}
+                                  </div>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -668,7 +702,7 @@ export default function App() {
             <form onSubmit={handleLogin}>
               <input 
                 type="password" 
-                placeholder="Enter Password" 
+                placeholder="Enter Password (1234)" 
                 className="w-full border border-stone-200 rounded-lg p-3 mb-4 focus:ring-2 focus:ring-stone-800 outline-none"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
