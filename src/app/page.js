@@ -453,7 +453,16 @@ export default function App() {
                            )}
                         </div>
 
-                        {/* 2. Today's Thought Audio (Review) */}
+                        {/* 2. Part / Series (Tags) */}
+                        {/* UPDATED STYLE: Smaller font for mobile, tight spacing */}
+                        {(data?.group || data?.version) && (
+                          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-6 px-4">
+                             {data?.group && <span className="font-bold text-stone-900 text-base md:text-lg">{data.group}</span>}
+                             {data?.version && <span className="font-medium text-stone-500 text-base md:text-lg">{data.version}</span>}
+                          </div>
+                        )}
+
+                        {/* 3. Today's Thought Audio (Review) */}
                         {(data?.reviewAudioUrl || isAdmin) && (
                           <div className="mb-6 mx-4 bg-stone-50 rounded-xl p-4 border border-stone-100">
                             <div className="flex items-center gap-3 mb-2">
@@ -489,14 +498,6 @@ export default function App() {
                                 </button>
                               </div>
                             )}
-                          </div>
-                        )}
-
-                        {/* 3. Part / Series (Tags) */}
-                        {(data?.group || data?.version) && (
-                          <div className="flex items-baseline gap-3 mb-6 px-4">
-                             {data?.group && <span className="font-bold text-stone-900 text-lg">{data.group}</span>}
-                             {data?.version && <span className="font-medium text-stone-500 text-lg">{data.version}</span>}
                           </div>
                         )}
 
@@ -570,7 +571,7 @@ export default function App() {
             <form onSubmit={handleLogin}>
               <input 
                 type="password" 
-                placeholder="Enter Password" 
+                placeholder="Enter Password (1234)" 
                 className="w-full border border-stone-200 rounded-lg p-3 mb-4 focus:ring-2 focus:ring-stone-800 outline-none"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
