@@ -443,12 +443,28 @@ export default function App() {
                       </div>
                     ) : (
                       <div className="flex flex-col h-full">
-                        {/* 1. Header (Title) */}
-                        <div className="mb-2 px-4 pt-6"> 
+                        
+                        {/* 1. Header (Title) & Series Name (Label) */}
+                        <div className="mb-6 px-4 pt-6"> 
+                           {/* Series Name (Version) moved to Top Label */}
+                           {data?.version && (
+                             <h3 className="text-sm text-stone-400 font-bold uppercase mb-2 tracking-widest">
+                               {data.version}
+                             </h3>
+                           )}
+                           
+                           {/* Title */}
                            {data?.header && (
-                             <h2 className="text-3xl md:text-4xl font-serif font-bold text-stone-900 leading-tight">
+                             <h2 className="text-3xl md:text-4xl font-serif font-bold text-stone-900 leading-tight mb-2">
                                {data.header}
                              </h2>
+                           )}
+
+                           {/* Part Number (Group) stays here */}
+                           {data?.group && (
+                             <div className="font-bold text-stone-900 text-base">
+                                {data.group}
+                             </div>
                            )}
                         </div>
 
@@ -491,16 +507,7 @@ export default function App() {
                           </div>
                         )}
 
-                        {/* 3. Part / Series (Tags) */}
-                        {/* UPDATED STYLE: Smaller font for mobile (text-sm), tight spacing */}
-                        {(data?.group || data?.version) && (
-                          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-6 px-4">
-                             {data?.group && <span className="font-bold text-stone-900 text-sm md:text-base">{data.group}</span>}
-                             {data?.version && <span className="font-medium text-stone-500 text-sm md:text-base">{data.version}</span>}
-                          </div>
-                        )}
-
-                        {/* 4. Scripture Reading Audio (Listen) */}
+                        {/* 3. Scripture Reading Audio (Listen) */}
                         {(data?.audioUrl || isAdmin) && (
                           <div className="mb-8 mx-4 bg-stone-50 rounded-xl p-4 border border-stone-100">
                             <div className="flex items-center gap-3 mb-2">
@@ -539,7 +546,7 @@ export default function App() {
                           </div>
                         )}
 
-                        {/* 5. Scripture Text (Read) */}
+                        {/* 4. Scripture Text (Read) */}
                         <div className="prose prose-stone max-w-none flex-1 px-4 pb-8">
                            <div className="text-xl md:text-2xl font-serif leading-relaxed text-stone-800 whitespace-pre-wrap">
                              {renderScripture(data?.scripture)}
