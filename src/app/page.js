@@ -443,6 +443,8 @@ export default function App() {
                       </div>
                     ) : (
                       <div className="flex flex-col h-full">
+                        {/* --- TOP SECTION: Header, Audio, Meta --- */}
+                        
                         {/* 1. Header */}
                         <div className="mb-4 pr-10"> 
                            <h3 className="text-sm text-stone-400 font-bold uppercase mb-4 tracking-widest">Scripture Reading</h3>
@@ -453,7 +455,15 @@ export default function App() {
                            )}
                         </div>
 
-                        {/* 2. TODAY'S THOUGHT (Review Audio) */}
+                        {/* 2. Group & Version (Moved Up) */}
+                        {(data?.group || data?.version) && (
+                          <div className="flex gap-4 mb-6 pb-4 border-b border-stone-100">
+                             {data?.group && <p className="font-bold text-stone-900">{data.group}</p>}
+                             {data?.version && <p className="font-bold text-stone-500">{data.version}</p>}
+                          </div>
+                        )}
+
+                        {/* 3. TODAY'S THOUGHT (Moved Down 1 spot) */}
                         {(data?.reviewAudioUrl || isAdmin) && (
                           <div className="mb-6 bg-stone-50 rounded-xl p-4 border border-stone-100">
                             <div className="flex items-center gap-3 mb-2">
@@ -492,15 +502,7 @@ export default function App() {
                           </div>
                         )}
 
-                        {/* 3. Group & Version */}
-                        {(data?.group || data?.version) && (
-                          <div className="flex gap-4 mb-6 pb-4 border-b border-stone-100">
-                             {data?.group && <p className="font-bold text-stone-900">{data.group}</p>}
-                             {data?.version && <p className="font-bold text-stone-500">{data.version}</p>}
-                          </div>
-                        )}
-
-                        {/* 4. SCRIPTURE READING (Listen Audio) */}
+                        {/* 4. SCRIPTURE READING */}
                         {(data?.audioUrl || isAdmin) && (
                           <div className="mb-8 bg-stone-50 rounded-xl p-4 border border-stone-100">
                             <div className="flex items-center gap-3 mb-2">
@@ -539,8 +541,8 @@ export default function App() {
                           </div>
                         )}
 
-                        {/* 5. Scripture Text (Moved to Bottom) */}
-                        <div className="prose prose-stone max-w-none flex-1">
+                        {/* 5. Scripture Text */}
+                        <div className="prose prose-stone max-w-none flex-1 mb-8">
                            <div className="text-xl md:text-2xl font-serif leading-relaxed text-stone-800 whitespace-pre-wrap">
                              {renderScripture(data?.scripture)}
                            </div>
